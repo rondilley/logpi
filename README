@@ -1,0 +1,31 @@
+=== Log Pseudo Indexer (logpi)
+
+by Ron Dilley <ron.dilley@uberadmin.com>
+
+For the latest information on logpi, please see:
+http://www.uberadmin.com/Projects/logpi/
+
+== What is Log Peudo Indexer (logpi)?
+
+== Why use it?
+
+I built this tool to solve a log searching/analysis problem that I have
+suffered through while responding to many security breaches.
+Invariably, I need to find a needle in a haystack of log data.
+
+If you need to find a something fast without the expense of parting and
+indexing everything, then this is the tool for you.
+
+== Implementation
+
+== Bugs
+
+I am not a programmer by any stretch of the imagination.  I
+have attempted to remove the obvious bugs and other
+programmer related errors but please keep in mind the first
+sentence.  If you find an issue with code, please send me
+an e-mail with details and I will be happy to look into
+it.
+
+Ron Dilley
+ron.dilley@uberadmin.com
