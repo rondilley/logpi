@@ -1,7 +1,7 @@
 dnl Process this file with autoconf to produce a configure script
 m4_include([version.m4])
 AC_PREREQ([2.59])
-AC_INIT([Log Templater], VERSION_NUMBER, [ron.dilley@uberadmin.com], [tmpltr], [http://www.uberadmin.com/Projects/tmpltr/])
+AC_INIT([Log Pseudo Indexer], VERSION_NUMBER, [ron.dilley@uberadmin.com], [logpi], [http://www.uberadmin.com/Projects/logpi/])
 AC_CONFIG_SRCDIR(src/main.c)
 AC_CONFIG_AUX_DIR(config)
 AM_INIT_AUTOMAKE
@@ -215,7 +215,7 @@ AC_TYPE_UINT8_T
 
 AC_CONFIG_HEADER(include/config.h)
 AC_PROG_INSTALL
-AC_OUTPUT(Makefile src/Makefile tmpltr.1)
+AC_OUTPUT(Makefile src/Makefile logpi.1)
 
 BINDIR=`eval echo ${bindir}`; BINDIR=`eval echo ${BINDIR}`;
 MANDIR=`eval echo ${mandir}/${mansubdir}`; MANDIR=`eval echo ${MANDIR}`;
