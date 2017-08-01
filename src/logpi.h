@@ -85,11 +85,9 @@ typedef struct {
  *
  ****/
 
-int printTemplate( const struct hashRec_s *hashRec );
+int printAddress( struct hashRec_s *hashRec );
 int processFile( const char *fName );
-int showTemplates( void );
-int loadTemplateFile( const char *fName );
-char *clusterTemplate( char *template, metaData_t *md, char *oBuf, int bufSize );
+int showAddresses( void );
 
 #endif /* TMPLTR_DOT_H */
 

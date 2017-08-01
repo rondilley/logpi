@@ -2,7 +2,7 @@
  *
  * Description: Line Parser Functions
  * 
- * Copyright (c) 2008-2015, Ron Dilley
+ * Copyright (c) 2008-2017, Ron Dilley
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -149,25 +149,25 @@ int parseLine( char *line ) {
       if ( config->debug >= 5 ) {
 	switch ( fieldTypeChar ) {
 	case 's':
-	  printf( "DEBUG - Extracted string [%s]\n", fields[fieldPos] );
+	  printf( "DEBUG - Extracted string [%s]\n", fields[fieldPos]+1 );
 	  break;
 	case 'd':
-	  printf( "DEBUG - Extracted number [%s]\n", fields[fieldPos] );
+	  printf( "DEBUG - Extracted number [%s]\n", fields[fieldPos]+1 );
 	  break;
 	case 'c':
-	  printf( "DEBUG - Extracted character [%s]\n", fields[fieldPos] );
+	  printf( "DEBUG - Extracted character [%s]\n", fields[fieldPos]+1 );
 	  break;
 	case 'i':
-	  printf( "DEBUG - Extracted ipv4 [%s]\n", fields[fieldPos] );
+	  printf( "DEBUG - Extracted ipv4 [%s]\n", fields[fieldPos]+1 );
 	  break;
 	case 'I':
-	  printf( "DEBUG - Extracted ipv6 [%s]\n", fields[fieldPos] );
+	  printf( "DEBUG - Extracted ipv6 [%s]\n", fields[fieldPos]+1 );
 	  break;
 	case 'm':
-	  printf( "DEBUG - Extracted MAC [%s]\n", fields[fieldPos] );
+	  printf( "DEBUG - Extracted MAC [%s]\n", fields[fieldPos]+1 );
 	  break;
 	case 'x':
-	  printf( "DEBUG - Extracted hex [%s]\n", fields[fieldPos] );
+	  printf( "DEBUG - Extracted hex [%s]\n", fields[fieldPos]+1 );
 	  break;
 	default:
 	  printf( "DEBUG - Extracted unknown [%c] - [%s]\n", fieldTypeChar, fields[fieldPos] );

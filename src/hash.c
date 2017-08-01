@@ -2,7 +2,7 @@
  *
  * Description: Hash Functions
  * 
- * Copyright (c) 2008-2015, Ron Dilley
+ * Copyright (c) 2008-2017, Ron Dilley
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -119,12 +119,19 @@ void freeHash( struct hash_s *hash ) {
 
 /****
  *
+ * zero data point if you are using it as a counter
+ * 
+ ****/
+
+
+/****
+ *
  * traverse all hash records, calling func() for each one
  *
  ****/
 
 
-int traverseHash( const struct hash_s *hash, int (*fn) (const struct hashRec_s *hashRec) ) {
+int traverseHash( const struct hash_s *hash, int (*fn) (struct hashRec_s *hashRec) ) {
   struct hashRec_s *curHashRec;
   size_t key;
 
