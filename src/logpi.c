@@ -67,20 +67,23 @@ extern int reload;
  *
  ****/
 
-int printAddress( struct hashRec_s *hashRec ) {
+int printAddress( const struct hashRec_s *hashRec ) {
+  metaData_t *tmpMd;
+  
+  if ( hashRec->data != NULL ) {
+    tmpMd = (metaData_t *)hashRec->data;
+
 #ifdef DEBUG
-  if ( config->debug >= 3 )
-    printf( "DEBUG - Searching for [%s]\n", hashRec->keyString );
+    if ( config->debug >= 3 )
+      printf( "DEBUG - Searching for [%s]\n", hashRec->keyString );
 #endif
   
-  /* save addr if -w was used */
-  if ( config->outFile_st != NULL )
-    fprintf( config->outFile_st, "%s,%lu\n", hashRec->keyString+1, (uint64_t)hashRec->data );
+    /* save addr if -w was used */
+    if ( config->outFile_st != NULL )
+      fprintf( config->outFile_st, "%s,%lu\n", hashRec->keyString+1, tmpMd->count );
     
-  printf( "%s,%lu\n", hashRec->keyString+1, (uint64_t)hashRec->data );
-  
-  /* zero the data pointer */
-  hashRec->data = NULL;
+    printf( "%s,%lu\n", hashRec->keyString+1, tmpMd->count );
+  }
   
   /* can use this later to interrupt traversing the hash */
   if ( quit )
@@ -104,6 +107,7 @@ int processFile( const char *fName ) {
   unsigned int lineCount = 0, lineLen = 0, minLineLen = sizeof(inBuf), maxLineLen = 0, totLineLen = 0;
   unsigned int argCount = 0, totArgCount = 0, minArgCount = MAX_FIELD_POS, maxArgCount = 0;
   struct hashRec_s *tmpRec;
+  metaData_t *tmpMd;
   struct Fields_s **curFieldPtr;
 
   /* initialize the hash if we need to */
@@ -169,15 +173,30 @@ int processFile( const char *fName ) {
       }
 #endif
 
+
       for ( i = 1; i < ret; i++ ) {
         getParsedField( oBuf, sizeof( oBuf ), i );
         if ( ( oBuf[0] EQ 'i' ) || ( oBuf[0] EQ 'I' ) || ( oBuf[0] EQ 'm' ) ) {
           if ( ( tmpRec = getHashRecord( addrHash, oBuf ) ) EQ NULL ) { // new addrHash
-            addUniqueHashRec( addrHash, oBuf, strlen( oBuf ), (void *)1 );
-            /* XXX should not happen every time */
-            addrHash = dyGrowHash( addrHash );
-          } else // update addr count
-            tmpRec->data++;
+            /* store line metadata */
+	    if ( ( tmpMd = (metaData_t *)XMALLOC( sizeof( metaData_t ) ) ) EQ NULL ) {
+              fprintf( stderr, "ERR - Unable to allocate memory, aborting\n" );
+              abort();
+            }
+	    XMEMSET( tmpMd, 0, sizeof( metaData_t ) );
+	    tmpMd->count = 1;
+            /* XXX add line number and offset */
+            addUniqueHashRec( addrHash, oBuf, strlen( oBuf ), tmpMd );
+            /* XXX this is a bit overkill */
+            if ( ( (float)addrHash->totalRecords / (float)addrHash->size ) > 0.8 )
+              addrHash = dyGrowHash( addrHash );
+          } else { // update addr count
+            if ( tmpRec->data != NULL ) {
+	      tmpMd = (metaData_t *)tmpRec->data;
+	      tmpMd->count++;
+              /* XXX add line number and offset */
+            }
+          }
         }
       }
       

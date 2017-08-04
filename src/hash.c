@@ -131,7 +131,7 @@ void freeHash( struct hash_s *hash ) {
  ****/
 
 
-int traverseHash( const struct hash_s *hash, int (*fn) (struct hashRec_s *hashRec) ) {
+int traverseHash( const struct hash_s *hash, int (*fn) (const struct hashRec_s *hashRec) ) {
   struct hashRec_s *curHashRec;
   size_t key;
 

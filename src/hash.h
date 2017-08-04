@@ -94,7 +94,7 @@ void *popHash( struct hash_s *hash );
 char *hexConvert( const char *keyString, int keyLen, char *buf, const int bufLen );
 char *utfConvert( const char *keyString, int keyLen, char *buf, const int bufLen );
 uint32_t getHashSize( struct hash_s *hash );
-int traverseHash( const struct hash_s *hash, int (*fn) (struct hashRec_s *hashRec) );
+int traverseHash( const struct hash_s *hash, int (*fn) (const struct hashRec_s *hashRec) );
 
 #endif /* end of HASH_DOT_H */
 

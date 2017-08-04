@@ -67,16 +67,15 @@
  *
  ****/
 
-struct Fields_s {
-  int count;
-  struct Fields_s *next;
-  struct binTree_s *head;
+struct Address_s {
+  size_t line;
+  size_t offset;
+  struct Address_s *next;
 };
 
 typedef struct {
-  char lBuf[LINEBUF_SIZE];
   size_t count;
-  struct Fields_s *head;
+  struct Address_s *head;
 } metaData_t;
 
 /****
@@ -85,7 +84,7 @@ typedef struct {
  *
  ****/
 
-int printAddress( struct hashRec_s *hashRec );
+int printAddress( const struct hashRec_s *hashRec );
 int processFile( const char *fName );
 int showAddresses( void );
 
