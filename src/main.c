@@ -231,14 +231,14 @@ PRIVATE void print_help( void ) {
   fprintf( stderr, " -g|--greedy            ignore quotes\n" );
   fprintf( stderr, " -h|--help              this info\n" );
   fprintf( stderr, " -v|--version           display version information\n" );
-  fprintf( stderr, " -w|--write {file}      save templates to file\n" );
+  fprintf( stderr, " -w|--write {file}      save metadata to file\n" );
   fprintf( stderr, " filename               one or more files to process, use '-' to read from stdin\n" );
 #else
   fprintf( stderr, " -d {lvl}      enable debugging info\n" );
   fprintf( stderr, " -g            ignore quotes\n" );
   fprintf( stderr, " -h            this info\n" );
   fprintf( stderr, " -v            display version information\n" );
-  fprintf( stderr, " -w {file}     save templates to file\n" );
+  fprintf( stderr, " -w {file}     save metadata to file\n" );
   fprintf( stderr, " filename      one or more files to process, use '-' to read from stdin\n" );
 #endif
 

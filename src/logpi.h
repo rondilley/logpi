@@ -88,5 +88,5 @@ int printAddress( const struct hashRec_s *hashRec );
 int processFile( const char *fName );
 int showAddresses( void );
 
-#endif /* TMPLTR_DOT_H */
+#endif /* LOGPI_DOT_H */
 

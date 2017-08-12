@@ -179,12 +179,18 @@ int processFile( const char *fName ) {
         if ( ( oBuf[0] EQ 'i' ) || ( oBuf[0] EQ 'I' ) || ( oBuf[0] EQ 'm' ) ) {
           if ( ( tmpRec = getHashRecord( addrHash, oBuf ) ) EQ NULL ) { // new addrHash
             /* store line metadata */
+            
 	    if ( ( tmpMd = (metaData_t *)XMALLOC( sizeof( metaData_t ) ) ) EQ NULL ) {
               fprintf( stderr, "ERR - Unable to allocate memory, aborting\n" );
               abort();
             }
 	    XMEMSET( tmpMd, 0, sizeof( metaData_t ) );
 	    tmpMd->count = 1;
+            
+            	  tmpAddr = (metaData_t *)XMALLOC( sizeof( metaData_t ) );
+	  XMEMSET( tmpMd, 0, sizeof( metaData_t ) );
+	  tmpMd->count = 1;
+	  XSTRNCPY( tmpMd->lBuf, inBuf, LINEBUF_SIZE );
             /* XXX add line number and offset */
             addUniqueHashRec( addrHash, oBuf, strlen( oBuf ), tmpMd );
             /* XXX this is a bit overkill */
