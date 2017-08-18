@@ -69,6 +69,7 @@ extern int reload;
 
 int printAddress( const struct hashRec_s *hashRec ) {
   metaData_t *tmpMd;
+  struct Address_s *tmpAddr;
   
   if ( hashRec->data != NULL ) {
     tmpMd = (metaData_t *)hashRec->data;
@@ -80,9 +81,25 @@ int printAddress( const struct hashRec_s *hashRec ) {
   
     /* save addr if -w was used */
     if ( config->outFile_st != NULL )
-      fprintf( config->outFile_st, "%s,%lu\n", hashRec->keyString+1, tmpMd->count );
+      fprintf( config->outFile_st, "%s,%lu", hashRec->keyString+1, tmpMd->count );
+    else
+      printf( "%s,%lu", hashRec->keyString+1, tmpMd->count );
     
-    printf( "%s,%lu\n", hashRec->keyString+1, tmpMd->count );
+    /* free the list of pseudo indexes */
+    while( ( tmpAddr = tmpMd->head ) != NULL ) {
+      /* save addr if -w was used */
+      if ( config->outFile_st != NULL )
+        fprintf( config->outFile_st, ",%lu:%lu", tmpAddr->line+1, tmpAddr->offset );
+      else
+        printf( ",%lu:%lu", tmpAddr->line+1, tmpAddr->offset );
+      
+      tmpMd->head = tmpAddr->next;
+      XFREE( tmpAddr );
+    }
+    if ( config->outFile_st != NULL )
+      fprintf( config->outFile_st, "\n" );
+    else
+        printf( "\n" );
   }
   
   /* can use this later to interrupt traversing the hash */
@@ -104,10 +121,11 @@ int processFile( const char *fName ) {
   char patternBuf[4096];
   char oBuf[4096];
   PRIVATE int c = 0, i, ret;
-  unsigned int lineCount = 0, lineLen = 0, minLineLen = sizeof(inBuf), maxLineLen = 0, totLineLen = 0;
+  unsigned int totLineCount = 0, lineCount = 0, lineLen = 0, minLineLen = sizeof(inBuf), maxLineLen = 0, totLineLen = 0;
   unsigned int argCount = 0, totArgCount = 0, minArgCount = MAX_FIELD_POS, maxArgCount = 0;
   struct hashRec_s *tmpRec;
   metaData_t *tmpMd;
+  struct Address_s *tmpAddr;
   struct Fields_s **curFieldPtr;
 
   /* initialize the hash if we need to */
@@ -187,12 +205,15 @@ int processFile( const char *fName ) {
 	    XMEMSET( tmpMd, 0, sizeof( metaData_t ) );
 	    tmpMd->count = 1;
             
-            	  tmpAddr = (metaData_t *)XMALLOC( sizeof( metaData_t ) );
-	  XMEMSET( tmpMd, 0, sizeof( metaData_t ) );
-	  tmpMd->count = 1;
-	  XSTRNCPY( tmpMd->lBuf, inBuf, LINEBUF_SIZE );
+            tmpAddr = (struct Address_s *)XMALLOC( sizeof( struct Address_s ) );
+            XMEMSET( tmpAddr, 0, sizeof( struct Address_s ) );
+            tmpMd->head = tmpAddr;
+            tmpMd->head->line = totLineCount;
+            tmpMd->head->offset = i;
+            
             /* XXX add line number and offset */
             addUniqueHashRec( addrHash, oBuf, strlen( oBuf ), tmpMd );
+
             /* XXX this is a bit overkill */
             if ( ( (float)addrHash->totalRecords / (float)addrHash->size ) > 0.8 )
               addrHash = dyGrowHash( addrHash );
@@ -200,6 +221,13 @@ int processFile( const char *fName ) {
             if ( tmpRec->data != NULL ) {
 	      tmpMd = (metaData_t *)tmpRec->data;
 	      tmpMd->count++;
+              tmpAddr = (struct Address_s *)XMALLOC( sizeof( struct Address_s ) );
+              XMEMSET( tmpAddr, 0, sizeof( struct Address_s ) );
+              tmpAddr->next = tmpMd->head;
+              tmpMd->head = tmpAddr;
+              tmpMd->head->line = totLineCount;
+              tmpMd->head->offset = i;
+            
               /* XXX add line number and offset */
             }
           }
@@ -207,6 +235,7 @@ int processFile( const char *fName ) {
       }
       
       lineCount++;
+      totLineCount++;
     }
   }
   
