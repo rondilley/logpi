@@ -2,3 +2,6 @@
 
 	* Initial public release.
 
+2017-08-17  Ron Dilley <ron.dilley@uberadmin.com>
+
+	* Added full indexing of all network address instances

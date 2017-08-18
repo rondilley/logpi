@@ -1,11 +1,13 @@
-Templater (tmpltr) TODO list
+Log Pseudo Indexer (logpi) TODO list
 ==============
 
 Short-term:
 -----------
-* XXX
+* Add better parsing of IPv6 address and all the partial formats
+* Add a binary index option
 
 Long-term:
 ----------
-* XXX
+* Impliment a network address search command that seemlessly uses the generated
+  indexes
 

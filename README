@@ -7,16 +7,43 @@ http://www.uberadmin.com/Projects/logpi/
 
 == What is Log Peudo Indexer (logpi)?
 
+Logpi parses text log files and outputs occurences of commong network
+addressess including IPv4, IPv6 and MAC addresses.  These pseudo index or
+metadata files can be used to accelerate searching large log data sets by
+for network addresses.
+
 == Why use it?
 
 I built this tool to solve a log searching/analysis problem that I have
-suffered through while responding to many security breaches.
-Invariably, I need to find a needle in a haystack of log data.
+suffered through while responding to many security breaches.  It always takes
+far too long to answer the question "have I seen this network address". I like
+to keep two years of syslog generated logs at all times so indexing everying
+becomes a complex lexical and resource/IO problem.
 
-If you need to find a something fast without the expense of parting and
+The simple answer was to index the fields that are easy to identify in
+arbitrary log data. 
+
+If you need to find a something fast without the expense of parsing and
 indexing everything, then this is the tool for you.
 
 == Implementation
+
+Running the command line tool is simple:
+
+$ ./src/logpi /var/log/syslog
+Opening [/var/log/syslog] for read
+192.168.103.2,20,401:11,382:11,350:11,332:11,313:11,295:11,271:11,253:11,235:11,216:11,197:11,172:11,154:11,135:11,117:11,94:11,76:11,58:11,39:11,20:11
+192.168.103.133,80,408:9,399:11,398:9,397:9,391:9,380:11,379:9,378:9,356:9,348:11,347:9,346:9,340:9,330:11,329:9,328:9,322:9,311:11,310:9,309:9,304:9,293:11,292:9,291:9,278:9,269:11,268:9,267:9,261:9,251:11,250:9,249:9,244:9,233:11,232:9,231:9,218:9,214:11,213:9,212:9,204:9,195:11,194:9,193:9,181:9,170:11,169:9,168:9,162:9,152:11,151:9,150:9,142:9,133:11,132:9,131:9,125:9,115:11,114:9,113:9,103:9,92:11,91:9,90:9,85:9,74:11,73:9,72:9,66:9,56:11,55:9,54:9,47:9,37:11,36:9,35:9,29:9,18:11,17:9,16:9
+255.255.255.0,20,400:12,381:12,349:12,331:12,312:12,294:12,270:12,252:12,234:12,215:12,196:12,171:12,153:12,134:12,116:12,93:12,75:12,57:12,38:12,19:12
+127.0.0.1,9,375:11,372:11,371:11,368:11,365:11,364:11,190:11,187:11,186:11
+192.168.103.254,60,402:12,398:11,397:13,383:12,379:11,378:13,351:12,347:11,346:13,333:12,329:11,328:13,314:12,310:11,309:13,296:12,292:11,291:13,272:12,268:11,267:13,254:12,250:11,249:13,236:12,232:11,231:13,217:12,213:11,212:13,198:12,194:11,193:13,173:12,169:11,168:13,155:12,151:11,150:13,136:12,132:11,131:13,118:12,114:11,113:13,95:12,91:11,90:13,77:12,73:11,72:13,59:12,55:11,54:13,40:12,36:11,35:13,21:12,17:11,16:13
+
+The output are text files with <CR> delimeted records.
+
+Each record is as follows:
+{NETWORK ADDRESS},{OCCURENCE COUNT},{LINE NUMBER}:{FIELD OFFSET},...<CR>
+
+Where there will be one or more line/offset pairs.
 
 == Bugs
 
