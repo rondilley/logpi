@@ -26,7 +26,7 @@
  *.
  ****/
 
-#include "main.h"
+#include "lpi_main.h"
 
 /****
  *
