@@ -160,9 +160,6 @@ int main(int argc, char *argv[]) {
       /* do something */
   }
 
-  /* show addresses */
-  showAddresses();
-  
   /*
    * finished with the work
    */
