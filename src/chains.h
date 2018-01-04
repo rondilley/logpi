@@ -43,6 +43,8 @@
 #include "util.h"
 #include "mem.h"
 #include "hash.h"
+#include "logpi.h"
+
 
 /****
  *
