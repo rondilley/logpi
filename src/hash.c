@@ -67,7 +67,7 @@ extern Config_t *config;
  *
  ****/
 
-uint32_t calcHash(uint32_t hashSize, const void *keyString) {
+uint32_t calcHash(uint32_t hashSize, const char *keyString) {
   int32_t val = 0;
   const char *ptr;
   int i, tmp, keyLen = strlen( keyString ) + 1;
@@ -572,13 +572,25 @@ struct hash_s *initHash(uint32_t hashSize) {
  *
  ****/
 
-uint32_t searchHash(struct hash_s *hash, const void *keyString) {
+uint32_t searchHash(struct hash_s *hash, const char *keyString) {
   struct hashRec_s *tmpHashRec = NULL;
-  uint32_t key = calcHash(hash->size, keyString);
+//  uint32_t key = calcHash(hash->size, keyString);
+  uint32_t key;
   int depth = 0;
   int keyLen = strlen(keyString)+1;
-  int i;
-
+  int i, tmp;
+  int32_t val = 0;
+  
+  /* generate the lookup hash */
+  for (i = 0; i < keyLen; i++) {
+    val = (val << 4) + (keyString[i] & 0xff);
+    if ((tmp = (val & 0xf0000000))) {
+      val = val ^ (tmp >> 24);
+      val = val ^ tmp;
+    }
+  }
+  key = val % hash->size;
+  
 #ifdef DEBUG
   if (config->debug >= 3)
     printf("DEBUG - Searching for (%s) in hash table at [%d]\n",

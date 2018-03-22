@@ -75,14 +75,14 @@ struct hash_s {
  *
  ****/
 
-uint32_t calcHash(uint32_t hashSize, const void *keyString);
+uint32_t calcHash(uint32_t hashSize, const char *keyString);
 void freeHash(struct hash_s *hash);
 int addHashRec(struct hash_s *hash, uint32_t key, char *keyString, void *data,
                time_t lastSeen);
 int addUniqueHashRec(struct hash_s *hash, const char *keyString, int keyLen,
                      void *data);
 struct hash_s *initHash(uint32_t hashSize);
-uint32_t searchHash(struct hash_s *hash, const void *keyString);
+uint32_t searchHash(struct hash_s *hash, const char *keyString);
 void updateData(struct hash_s *hash, const void *keyString, const void *data);
 void dumpHash(struct hash_s *hash);
 struct hashRec_s *getHashRecord(struct hash_s *hash, const void *keyString);
