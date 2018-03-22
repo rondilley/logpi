@@ -102,12 +102,13 @@ int main(int argc, char *argv[]) {
     int option_index = 0;
     static struct option long_options[] = {{"version", no_argument, 0, 'v'},
                                            {"debug", required_argument, 0, 'd'},
+                                           {"file", required_argument, 0, 'f'},
                                            {"help", no_argument, 0, 'h'},
-										   {"quick", no_argument, 0, 'q'},
+                                           {"quick", no_argument, 0, 'q'},
                                            {0, no_argument, 0, 0}};
-    c = getopt_long(argc, argv, "vd:hq", long_options, &option_index);
+    c = getopt_long(argc, argv, "vd:f:hq", long_options, &option_index);
 #else
-    c = getopt(argc, argv, "vd:hq");
+    c = getopt(argc, argv, "vd:f:hq");
 #endif
 
     if (c EQ - 1)
@@ -128,7 +129,7 @@ int main(int argc, char *argv[]) {
     case 'f':
       /* load search terms from file */
       config->search_filename = (char *)XMALLOC(PATH_MAX + 1);
-      XSTRNCPY(config->search_filename, optarg, PATH_MAX);
+      XSTRNCPY(config->search_filename, optarg, strlen( optarg ) );
       break;
 
     case 'h':

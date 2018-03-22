@@ -267,8 +267,9 @@ int loadSearchFile(const char *fName) {
     config->search_terms =
         XREALLOC(config->search_terms, ((i + 2) * sizeof(char *)));
     config->search_terms[i] = XMALLOC(strlen(inBuf) + 1);
+    XMEMSET( config->search_terms[i], 0, strlen(inBuf) + 1 );
     config->search_terms[i + 1] = NULL;
-    XMEMCPY(config->search_terms[i++], inBuf, strlen(inBuf));
+    XMEMCPY(config->search_terms[i++], inBuf, strlen(inBuf)-1);
     if (config->debug >= 3)
       printf("DEBUG - Before [%s]", inBuf);
   }

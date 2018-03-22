@@ -5,9 +5,10 @@ Short-term:
 -----------
 * Add better parsing of IPv6 address and all the partial formats
 * Add a binary index option
+* Optimize the string match algorithm
+* Add on-the-fly decompression of log files and index files
 
 Long-term:
 ----------
-* Impliment a network address search command that seemlessly uses the generated
-  indexes
+* Add support for other known fields (usernames, etc)
 
