@@ -1,8 +1,8 @@
 /*****
  *
  * Description: Utility Function Headers
- * 
- * Copyright (c) 2008-2017, Ron Dilley
+ *
+ * Copyright (c) 2008-2018, Ron Dilley
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -34,17 +34,17 @@
  ****/
 
 #ifdef HAVE_CONFIG_H
-# include <config.h>
+#include <config.h>
 #endif
 
 #include <sysdep.h>
 
 #ifndef __SYSDEP_H__
-# error something is messed up
+#error something is messed up
 #endif
 
-#include <common.h>
 #include "mem.h"
+#include <common.h>
 
 /****
  *
@@ -52,13 +52,12 @@
  *
  ****/
 
-int display( int level, char *format, ... );
-int open_devnull( int fd );
-int is_dir_safe( const char *dir );
-int create_pid_file( const char *filename );
-static int safe_open( const char *filename );
-static void cleanup_pid_file( const char *filename );
-void sanitize_environment( void );
+int display(int level, char *format, ...);
+int open_devnull(int fd);
+int is_dir_safe(const char *dir);
+int create_pid_file(const char *filename);
+static int safe_open(const char *filename);
+static void cleanup_pid_file(const char *filename);
+void sanitize_environment(void);
 
 #endif /* end of UTIL_DOT_H */
-

@@ -1,8 +1,8 @@
 /*****
  *
  * Description: Main Headers
- * 
- * Copyright (c) 2008-2017, Ron Dilley
+ *
+ * Copyright (c) 2008-2018, Ron Dilley
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -40,20 +40,20 @@
  ****/
 
 #ifdef HAVE_CONFIG_H
-# include <config.h>
+#include <config.h>
 #endif
 
 #include <sysdep.h>
 
 #ifndef __SYSDEP_H__
-# error something is messed up
+#error something is messed up
 #endif
 
-#include <common.h>
-#include "util.h"
+#include "match.h"
 #include "mem.h"
 #include "searchpi.h"
-#include "match.h"
+#include "util.h"
+#include <common.h>
 
 /****
  *
@@ -74,11 +74,10 @@
  ****/
 
 int main(int argc, char *argv[]);
-PRIVATE void print_version( void );
-PRIVATE void print_help( void );
-PRIVATE void cleanup( void );
-PRIVATE void show_info( void );
-void ctime_prog( int signo );
+PRIVATE void print_version(void);
+PRIVATE void print_help(void);
+PRIVATE void cleanup(void);
+PRIVATE void show_info(void);
+void ctime_prog(int signo);
 
 #endif /* MAIN_DOT_H */
-

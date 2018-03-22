@@ -1,8 +1,8 @@
 /*****
  *
  * Description: Log Pseudo Templater Headers
- * 
- * Copyright (c) 2008-2017, Ron Dilley
+ *
+ * Copyright (c) 2008-2018, Ron Dilley
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -38,22 +38,22 @@
  ****/
 
 #ifdef HAVE_CONFIG_H
-# include <config.h>
+#include <config.h>
 #endif
 
 #include <sysdep.h>
 
 #ifndef __SYSDEP_H__
-# error something is messed up
+#error something is messed up
 #endif
 
-#include <common.h>
-#include "util.h"
+#include "bintree.h"
+#include "hash.h"
+#include "match.h"
 #include "mem.h"
 #include "parser.h"
-#include "hash.h"
-#include "bintree.h"
-#include "match.h"
+#include "util.h"
+#include <common.h>
 
 /****
  *
@@ -84,9 +84,12 @@ typedef struct {
  *
  ****/
 
-int printAddress( const struct hashRec_s *hashRec );
-int processFile( const char *fName );
-int showAddresses( void );
+int printAddress(const struct hashRec_s *hashRec);
+int processFile(const char *fName);
+int searchFile(const char *fName);
+int loadIndexFile(const char *fName);
+int loadSearchFile(const char *fName);
+void quickSort(size_t *number, int first, int last);
+int showAddresses(void);
 
 #endif /* LOGPI_DOT_H */
-

@@ -31,8 +31,8 @@
 #define TRUE 1
 
 #ifndef EXIT_SUCCESS
-# define EXIT_SUCCESS 0
-# define EXIT_FAILURE 1
+#define EXIT_SUCCESS 0
+#define EXIT_FAILURE 1
 #endif
 
 #define MODE_DAEMON 0
@@ -45,29 +45,29 @@
 #define NE !=
 
 #ifndef PATH_MAX
-# ifdef MAXPATHLEN
-#  define PATH_MAX MAXPATHLEN
-# else
-#  define PATH_MAX 1024
-# endif
+#ifdef MAXPATHLEN
+#define PATH_MAX MAXPATHLEN
+#else
+#define PATH_MAX 1024
+#endif
 #endif
 
 #ifdef __cplusplus
-# define BEGIN_C_DECLS extern "C" {
-# define END_C_DECLS }
+#define BEGIN_C_DECLS extern "C" {
+#define END_C_DECLS }
 #else /* !__cplusplus */
-# define BEGIN_C_DECLS
-# define END_C_DECLS
+#define BEGIN_C_DECLS
+#define END_C_DECLS
 #endif
 
 #ifdef HAVE_CONFIG_H
-# include <config.h>
+#include <config.h>
 #endif
 
 #include <sysdep.h>
 
 #ifndef __SYSDEP_H__
-# error something is messed up
+#error something is messed up
 #endif
 
 /****
@@ -88,6 +88,8 @@ typedef struct {
   gid_t gid;
   char *home_dir;
   char *log_dir;
+  char *search_filename;
+  char **search_terms;
   FILE *syslog_st;
   char *hostname;
   char *domainname;
@@ -97,13 +99,15 @@ typedef struct {
   int clusterDepth;
   int chain;
   int match;
+  int quick;
   int mode;
   int facility;
   int priority;
+  size_t *match_offsets;
+  size_t match_count;
   time_t current_time;
   pid_t cur_pid;
   FILE *outFile_st;
 } Config_t;
 
-#endif	/* end of COMMON_H */
-
+#endif /* end of COMMON_H */

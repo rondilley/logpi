@@ -9,8 +9,56 @@ http://www.uberadmin.com/Projects/logpi/
 
 Logpi parses text log files and outputs occurences of commong network
 addressess including IPv4, IPv6 and MAC addresses.  These pseudo index or
-metadata files can be used to accelerate searching large log data sets by
+metadata files can be used to accelerate searching large log data sets
 for network addresses.
+
+When I say fast:
+
+Processing a 29gb log file on a Mac Powerbook laptop takes ~12 minutes to index and ~30 seconds to query for multiple addresses.
+
+$ ls -la ./messages.log
+-rw-r--r--@ 1 user  staff  29187706427 Mar 16 18:43 ./messages.log
+
+$ time ./logpi -w ./messages.log.lpi ./messages.log 
+Opening [./messages.log] for read
+Processed 6319938 lines/min
+Processed 5731022 lines/min
+Processed 5577190 lines/min
+Processed 5783020 lines/min
+Processed 5662040 lines/min
+Processed 5754075 lines/min
+Processed 5652959 lines/min
+Processed 5684849 lines/min
+Processed 5767093 lines/min
+Processed 5910607 lines/min
+
+As the command above shows, the pseudo indexer is parsing and indexing ~5.7m lines per minute.
+
+The indexing is fast, but what really makes this tool useful for information security practitioners is the speed to search for address hits after the pseudo index has been generated.
+
+$ time ./spi 132.236.56.252,54.250.186.218 ./messages.log
+Searching for 132.236.56.252 54.250.186.218 
+Opening [./messages.log.lpi] for read
+MATCH [132.236.56.252] with 2 lines
+MATCH [54.250.186.218] with 2 lines
+Opening [./messages.log] for read
+Mar 16 00:27:07 10.143.2.123 1,2018/03/16 00:27:06,001901000402,TRAFFIC,end,1,2018/03/16 00:27:06,10.131.239.142,132.236.56.252,168.161.192.15,132.236.56.252,Allow Outbound,,,dns,vsys1,inside,outside,ethernet1/22,ethernet1/21,LA_log,2018/03/16 00:27:06,34411943,1,7001,53,38811,53,0x404019,udp,allow,211,88,123,2,2018/03/16 00:26:06,59,any,0,185835010247,0x0,10.0.0.0-10.255.255.255,US,0,1,1,aged-out,12,0,0,0,,PA1,from-policy
+Mar 16 00:39:52 10.143.2.123 1,2018/03/16 00:39:52,001901000402,THREAT,url,1,2018/03/16 00:39:52,10.146.58.93,54.250.186.218,168.161.192.16,54.250.186.218,Allow Outbound,,,ssl,vsys1,inside,outside,ethernet1/22,ethernet1/21,LA_log,2018/03/16 00:39:52,34754943,1,54989,443,25285,443,0x40f000,tcp,alert,"messenger-ws.direct.ly/",(9999),unknown,informational,client-to-server,70297609432,0x0,10.0.0.0-10.255.255.255,JP,0,,0,,,0,,,,,,,,0,12,0,0,0,,PA1,
+
+real	0m36.670s
+user	0m6.904s
+sys	0m14.143s
+
+
+$ time ./spi -q 132.236.56.252,54.250.186.218 ./messages.log
+Searching for 132.236.56.252 54.250.186.218 
+Opening [./messages.log.lpi] for read
+MATCH [132.236.56.252] with 2 lines
+MATCH [54.250.186.218] with 2 lines
+
+real	0m0.010s
+user	0m0.002s
+sys	0m0.003s
 
 == Why use it?
 
@@ -30,6 +78,18 @@ indexing everything, then this is the tool for you.
 
 Running the command line tool is simple:
 
+$ ./logpi --help
+logpi v0.3 [Mar 17 2018 - 17:27:17]
+
+syntax: logpi [options] filename [filename ...]
+ -d|--debug (0-9)       enable debugging info
+ -g|--greedy            ignore quotes
+ -h|--help              this info
+ -v|--version           display version information
+ -w|--write {file}      save metadata to file
+ filename               one or more files to process, use '-' to read from stdin
+
+
 $ ./src/logpi /var/log/syslog
 Opening [/var/log/syslog] for read
 192.168.103.2,20,401:11,382:11,350:11,332:11,313:11,295:11,271:11,253:11,235:11,216:11,197:11,172:11,154:11,135:11,117:11,94:11,76:11,58:11,39:11,20:11
@@ -44,6 +104,21 @@ Each record is as follows:
 {NETWORK ADDRESS},{OCCURENCE COUNT},{LINE NUMBER}:{FIELD OFFSET},...<CR>
 
 Where there will be one or more line/offset pairs.
+
+Searching using the pseudo indexes is simplified by using searchpi (spi).
+
+$ ./spi --help
+spi v0.3 [Mar 17 2018 - 17:27:18]
+
+syntax: logpi [options] searchterm[,searchterm] filename [filename ...]
+ -d|--debug (0-9)       enable debugging info
+ -f|--file {fname}      use search terms stored in a file
+ -h|--help              this info
+ -q|--quick             quick mode, report matches and counts only
+ -v|--version           display version information
+ searchterm             a comma separated list of search terms
+ filename               one or more files to process, use '-' to read from stdin
+
 
 == Bugs
 
