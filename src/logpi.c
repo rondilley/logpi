@@ -141,7 +141,8 @@ int processFile(const char *fName) {
 
   initParser();
 
-  /* XXX need to detect gzip files and open/read using gz */
+  /* check to see if the file is compressed */
+  /* XXX need to add bzip2 */
   if ((((foundPtr = strrchr(fName, '.')) != NULL)) && (strncmp(foundPtr, ".gz", 3) EQ 0))
     isGz = TRUE;
 
@@ -167,14 +168,12 @@ int processFile(const char *fName) {
                 strerror(errno));
         return (EXIT_FAILURE);
     }
-  }
+}
   }
   
+  /* XXX should block read based on filesystem BS */
   /* XXX should switch to file offsets instead of line numbers, will speed up the index searches */
-
   while ( ( ( isGz ) ? gzgets( gzInFile, inBuf, sizeof( inBuf ) ) : fgets(inBuf, sizeof(inBuf), inFile) ) != NULL && ! quit ) {
-      
-  //while (fgets(inBuf, sizeof(inBuf), inFile) != NULL && !quit) {
 
       if (reload EQ TRUE) {
       fprintf(stderr, "Processed %d lines/min\n", lineCount);

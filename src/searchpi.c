@@ -69,6 +69,7 @@ extern int reload;
 
 int searchFile(const char *fName) {
   FILE *inFile = NULL, *outFile = NULL;
+    gzFile gzInFile;
   char inBuf[8192];
   char indexFileName[PATH_MAX];
   PRIVATE int c = 0, i;
@@ -79,28 +80,55 @@ int searchFile(const char *fName) {
   struct Fields_s **curFieldPtr;
   size_t offMatchPos = 0;
   size_t curMatchLine = 1;
-
+  int isGz = FALSE;
+  char *foundPtr;
+  char indexBaseFileName[PATH_MAX];
+  
   /* XXX need to look for index file first */
+    if ((((foundPtr = strrchr(fName, '.')) != NULL)) && (strncmp(foundPtr, ".gz", 3) EQ 0)) {
+    isGz = TRUE;
+    strncpy( indexBaseFileName, fName, foundPtr - fName );
+    printf( "DEBUG - IDXBase: %s\n", indexBaseFileName );
+    }
+  
   sprintf(indexFileName, "%s.lpi", fName);
   if (( loadIndexFile(indexFileName) EQ EXIT_FAILURE ) || config->quick ) {
-    return (EXIT_FAILURE);
+        /* XXX if filename ends with '.gz', then look for different index name */
+    if ( isGz && !config->quick ) {
+        sprintf(indexFileName, "%s.lpi", indexBaseFileName );
+        if ( loadIndexFile(indexFileName) EQ EXIT_FAILURE )
+            return (EXIT_FAILURE );
+    } else
+      return (EXIT_FAILURE);
   }
   /* XXX once index is loaded, search original file for hits */
 
   fprintf(stderr, "Opening [%s] for read\n", fName);
 
+  if ( isGz ) {
+    /* gzip compressed */
+    if ((gzInFile = gzopen(fName, "rb"))EQ NULL) {
+        fprintf(stderr, "ERR - Unable to open file [%s] %d (%s)\n", fName, errno,
+                strerror(errno));
+        return (EXIT_FAILURE);
+    }
+  } else {
 #ifdef HAVE_FOPEN64
-  if ((inFile = fopen64(fName, "r")) EQ NULL) {
+    if ((inFile = fopen64(fName, "r")) EQ NULL) {
 #else
-  if ((inFile = fopen(fName, "r")) EQ NULL) {
+    if ((inFile = fopen(fName, "r")) EQ NULL) {
 #endif
-    fprintf(stderr, "ERR - Unable to open file [%s] %d (%s)\n", fName, errno,
-            strerror(errno));
-    return (EXIT_FAILURE);
+      fprintf(stderr, "ERR - Unable to open file [%s] %d (%s)\n", fName, errno,
+              strerror(errno));
+      return (EXIT_FAILURE);
+    }
   }
-
+    
   do {
-    retPtr = fgets(inBuf, sizeof(inBuf), inFile);
+    if ( isGz )
+        retPtr = gzgets( gzInFile, inBuf, sizeof( inBuf ) );
+        else
+      retPtr = fgets(inBuf, sizeof(inBuf), inFile);
    //printf("%zu %zu %zu\n", curMatchLine, offMatchPos, config->match_offsets[offMatchPos]);
 
     if (curMatchLine EQ config->match_offsets[offMatchPos]) {
@@ -117,6 +145,9 @@ int searchFile(const char *fName) {
     curMatchLine++;
   } while ((retPtr != NULL) && (config->match_offsets[offMatchPos] > 0 ));
 
+  if ( isGz )
+      gzclose( gzInFile );
+  else
   fclose(inFile);
 
   return (EXIT_SUCCESS);
