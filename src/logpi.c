@@ -134,7 +134,7 @@ int processFile(const char *fName) {
   struct Address_s *tmpAddr;
   struct Fields_s **curFieldPtr;
   int isGz = FALSE;
-  
+
   /* initialize the hash if we need to */
   if (addrHash EQ NULL)
     addrHash = initHash(96);
@@ -143,17 +143,18 @@ int processFile(const char *fName) {
 
   /* check to see if the file is compressed */
   /* XXX need to add bzip2 */
-  if ((((foundPtr = strrchr(fName, '.')) != NULL)) && (strncmp(foundPtr, ".gz", 3) EQ 0))
+  if ((((foundPtr = strrchr(fName, '.')) != NULL)) &&
+      (strncmp(foundPtr, ".gz", 3) EQ 0))
     isGz = TRUE;
 
   fprintf(stderr, "Opening [%s] for read\n", fName);
-  
-  if ( isGz ) {
+
+  if (isGz) {
     /* gzip compressed */
-    if ((gzInFile = gzopen(fName, "rb"))EQ NULL) {
-        fprintf(stderr, "ERR - Unable to open file [%s] %d (%s)\n", fName, errno,
-                strerror(errno));
-        return (EXIT_FAILURE);
+    if ((gzInFile = gzopen(fName, "rb")) EQ NULL) {
+      fprintf(stderr, "ERR - Unable to open file [%s] %d (%s)\n", fName, errno,
+              strerror(errno));
+      return (EXIT_FAILURE);
     }
   } else {
     if (strcmp(fName, "-") EQ 0) {
@@ -164,18 +165,21 @@ int processFile(const char *fName) {
 #else
       if ((inFile = fopen(fName, "r")) EQ NULL) {
 #endif
-        fprintf(stderr, "ERR - Unable to open file [%s] %d (%s)\n", fName, errno,
-                strerror(errno));
+        fprintf(stderr, "ERR - Unable to open file [%s] %d (%s)\n", fName,
+                errno, strerror(errno));
         return (EXIT_FAILURE);
+      }
     }
-}
   }
-  
-  /* XXX should block read based on filesystem BS */
-  /* XXX should switch to file offsets instead of line numbers, will speed up the index searches */
-  while ( ( ( isGz ) ? gzgets( gzInFile, inBuf, sizeof( inBuf ) ) : fgets(inBuf, sizeof(inBuf), inFile) ) != NULL && ! quit ) {
 
-      if (reload EQ TRUE) {
+  /* XXX should block read based on filesystem BS */
+  /* XXX should switch to file offsets instead of line numbers, will speed up
+   * the index searches */
+  while (((isGz) ? gzgets(gzInFile, inBuf, sizeof(inBuf))
+                 : fgets(inBuf, sizeof(inBuf), inFile)) != NULL &&
+         !quit) {
+
+    if (reload EQ TRUE) {
       fprintf(stderr, "Processed %d lines/min\n", lineCount);
 #ifdef DEBUG
       if (config->debug) {
@@ -239,7 +243,7 @@ int processFile(const char *fName) {
             tmpMd->head->offset = i;
 
             /* XXX add line number and offset */
-            addUniqueHashRec(addrHash, oBuf, strlen(oBuf)+1, tmpMd);
+            addUniqueHashRec(addrHash, oBuf, strlen(oBuf) + 1, tmpMd);
 
             /* XXX this is a bit overkill */
             if (((float)addrHash->totalRecords / (float)addrHash->size) > 0.8)
@@ -278,12 +282,12 @@ int processFile(const char *fName) {
 #endif
 
   if (inFile != stdin) {
-      if ( isGz )
-          gzclose( gzInFile );
-      else
-        fclose(inFile);
+    if (isGz)
+      gzclose(gzInFile);
+    else
+      fclose(inFile);
   }
-  
+
   deInitParser();
 
   return (EXIT_SUCCESS);

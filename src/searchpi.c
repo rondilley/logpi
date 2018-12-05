@@ -69,7 +69,7 @@ extern int reload;
 
 int searchFile(const char *fName) {
   FILE *inFile = NULL, *outFile = NULL;
-    gzFile gzInFile;
+  gzFile gzInFile;
   char inBuf[8192];
   char indexFileName[PATH_MAX];
   PRIVATE int c = 0, i;
@@ -83,21 +83,22 @@ int searchFile(const char *fName) {
   int isGz = FALSE;
   char *foundPtr;
   char indexBaseFileName[PATH_MAX];
-  
+
   /* XXX need to look for index file first */
-    if ((((foundPtr = strrchr(fName, '.')) != NULL)) && (strncmp(foundPtr, ".gz", 3) EQ 0)) {
+  if ((((foundPtr = strrchr(fName, '.')) != NULL)) &&
+      (strncmp(foundPtr, ".gz", 3) EQ 0)) {
     isGz = TRUE;
-    strncpy( indexBaseFileName, fName, foundPtr - fName );
-    printf( "DEBUG - IDXBase: %s\n", indexBaseFileName );
-    }
-  
+    strncpy(indexBaseFileName, fName, foundPtr - fName);
+    printf("DEBUG - IDXBase: %s\n", indexBaseFileName);
+  }
+
   sprintf(indexFileName, "%s.lpi", fName);
-  if (( loadIndexFile(indexFileName) EQ EXIT_FAILURE ) || config->quick ) {
-        /* XXX if filename ends with '.gz', then look for different index name */
-    if ( isGz && !config->quick ) {
-        sprintf(indexFileName, "%s.lpi", indexBaseFileName );
-        if ( loadIndexFile(indexFileName) EQ EXIT_FAILURE )
-            return (EXIT_FAILURE );
+  if ((loadIndexFile(indexFileName) EQ EXIT_FAILURE) || config->quick) {
+    /* XXX if filename ends with '.gz', then look for different index name */
+    if (isGz && !config->quick) {
+      sprintf(indexFileName, "%s.lpi", indexBaseFileName);
+      if (loadIndexFile(indexFileName) EQ EXIT_FAILURE)
+        return (EXIT_FAILURE);
     } else
       return (EXIT_FAILURE);
   }
@@ -105,12 +106,12 @@ int searchFile(const char *fName) {
 
   fprintf(stderr, "Opening [%s] for read\n", fName);
 
-  if ( isGz ) {
+  if (isGz) {
     /* gzip compressed */
-    if ((gzInFile = gzopen(fName, "rb"))EQ NULL) {
-        fprintf(stderr, "ERR - Unable to open file [%s] %d (%s)\n", fName, errno,
-                strerror(errno));
-        return (EXIT_FAILURE);
+    if ((gzInFile = gzopen(fName, "rb")) EQ NULL) {
+      fprintf(stderr, "ERR - Unable to open file [%s] %d (%s)\n", fName, errno,
+              strerror(errno));
+      return (EXIT_FAILURE);
     }
   } else {
 #ifdef HAVE_FOPEN64
@@ -123,13 +124,14 @@ int searchFile(const char *fName) {
       return (EXIT_FAILURE);
     }
   }
-    
+
   do {
-    if ( isGz )
-        retPtr = gzgets( gzInFile, inBuf, sizeof( inBuf ) );
-        else
+    if (isGz)
+      retPtr = gzgets(gzInFile, inBuf, sizeof(inBuf));
+    else
       retPtr = fgets(inBuf, sizeof(inBuf), inFile);
-   //printf("%zu %zu %zu\n", curMatchLine, offMatchPos, config->match_offsets[offMatchPos]);
+    // printf("%zu %zu %zu\n", curMatchLine, offMatchPos,
+    // config->match_offsets[offMatchPos]);
 
     if (curMatchLine EQ config->match_offsets[offMatchPos]) {
 #ifdef DEBUG
@@ -138,17 +140,17 @@ int searchFile(const char *fName) {
       printf("%s", inBuf);
 #endif
 
-	  while( config->match_offsets[offMatchPos] EQ curMatchLine )
-      	offMatchPos++;
+      while (config->match_offsets[offMatchPos] EQ curMatchLine)
+        offMatchPos++;
     }
 
     curMatchLine++;
-  } while ((retPtr != NULL) && (config->match_offsets[offMatchPos] > 0 ));
+  } while ((retPtr != NULL) && (config->match_offsets[offMatchPos] > 0));
 
-  if ( isGz )
-      gzclose( gzInFile );
+  if (isGz)
+    gzclose(gzInFile);
   else
-  fclose(inFile);
+    fclose(inFile);
 
   return (EXIT_SUCCESS);
 }
@@ -191,7 +193,7 @@ int loadIndexFile(const char *fName) {
     return (EXIT_FAILURE);
   }
 
-  while ( (fgets(inBuf, sizeof(inBuf), inFile) != NULL) && !done ) {
+  while ((fgets(inBuf, sizeof(inBuf), inFile) != NULL) && !done) {
     /* XXX test to see if the address matches a search term */
     /* XXX should impliment a high-speed search like boyer-moore */
     /* XXX this function does not handle multiple matches */
@@ -211,7 +213,7 @@ int loadIndexFile(const char *fName) {
                a++) {
             tok = strtok(NULL, ",");
             config->match_offsets[a] = atoi(tok);
-            //printf("%d %zu\n", a, config->match_offsets[a]);
+            // printf("%d %zu\n", a, config->match_offsets[a]);
 
             // printf("Offset: %zu\n", config->match_offsets[i]);
           }
@@ -219,14 +221,14 @@ int loadIndexFile(const char *fName) {
         }
       }
     }
-	if ( match EQ i )
-		done = TRUE;
+    if (match EQ i)
+      done = TRUE;
   }
 
   /* sort the offset list */
   quickSort(config->match_offsets, 0, config->match_count - 1);
 
-  //for (i = 0; i < config->match_count; i++)
+  // for (i = 0; i < config->match_count; i++)
   //  printf("Match: [%d] %zu\n", i, config->match_offsets[i]);
 
   fclose(inFile);
@@ -298,9 +300,9 @@ int loadSearchFile(const char *fName) {
     config->search_terms =
         XREALLOC(config->search_terms, ((i + 2) * sizeof(char *)));
     config->search_terms[i] = XMALLOC(strlen(inBuf) + 1);
-    XMEMSET( config->search_terms[i], 0, strlen(inBuf) + 1 );
+    XMEMSET(config->search_terms[i], 0, strlen(inBuf) + 1);
     config->search_terms[i + 1] = NULL;
-    XMEMCPY(config->search_terms[i++], inBuf, strlen(inBuf)-1);
+    XMEMCPY(config->search_terms[i++], inBuf, strlen(inBuf) - 1);
     if (config->debug >= 3)
       printf("DEBUG - Before [%s]", inBuf);
   }
