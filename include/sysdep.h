@@ -79,6 +79,10 @@
 # include <net/if.h>
 #endif
 
+#ifdef HAVE_ZLIB_H
+# include <zlib.h>
+#endif
+
 #ifdef HAVE_NETINET_IF_ETHER_H
 # include <netinet/if_ether.h>
 #endif

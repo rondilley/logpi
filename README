@@ -79,7 +79,7 @@ indexing everything, then this is the tool for you.
 Running the command line tool is simple:
 
 $ ./logpi --help
-logpi v0.3 [Mar 17 2018 - 17:27:17]
+logpi v0.4 [Dec  5 2018 - 13:20:05]
 
 syntax: logpi [options] filename [filename ...]
  -d|--debug (0-9)       enable debugging info
@@ -88,7 +88,6 @@ syntax: logpi [options] filename [filename ...]
  -v|--version           display version information
  -w|--write {file}      save metadata to file
  filename               one or more files to process, use '-' to read from stdin
-
 
 $ ./src/logpi /var/log/syslog
 Opening [/var/log/syslog] for read

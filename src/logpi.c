@@ -118,10 +118,12 @@ int printAddress(const struct hashRec_s *hashRec) {
 
 int processFile(const char *fName) {
   FILE *inFile = NULL, *outFile = NULL;
+  gzFile gzInFile;
   char inBuf[8192];
   char outFileName[PATH_MAX];
   char patternBuf[4096];
   char oBuf[4096];
+  char *foundPtr;
   PRIVATE int c = 0, i, ret;
   unsigned int totLineCount = 0, lineCount = 0, lineLen = 0,
                minLineLen = sizeof(inBuf), maxLineLen = 0, totLineLen = 0;
@@ -131,32 +133,50 @@ int processFile(const char *fName) {
   metaData_t *tmpMd;
   struct Address_s *tmpAddr;
   struct Fields_s **curFieldPtr;
-
+  int isGz = FALSE;
+  
   /* initialize the hash if we need to */
   if (addrHash EQ NULL)
     addrHash = initHash(96);
 
   initParser();
 
+  /* XXX need to detect gzip files and open/read using gz */
+  if ((((foundPtr = strrchr(fName, '.')) != NULL)) && (strncmp(foundPtr, ".gz", 3) EQ 0))
+    isGz = TRUE;
+
   fprintf(stderr, "Opening [%s] for read\n", fName);
-  if (strcmp(fName, "-") EQ 0) {
-    inFile = stdin;
+  
+  if ( isGz ) {
+    /* gzip compressed */
+    if ((gzInFile = gzopen(fName, "rb"))EQ NULL) {
+        fprintf(stderr, "ERR - Unable to open file [%s] %d (%s)\n", fName, errno,
+                strerror(errno));
+        return (EXIT_FAILURE);
+    }
   } else {
+    if (strcmp(fName, "-") EQ 0) {
+      inFile = stdin;
+    } else {
 #ifdef HAVE_FOPEN64
-    if ((inFile = fopen64(fName, "r")) EQ NULL) {
+      if ((inFile = fopen64(fName, "r")) EQ NULL) {
 #else
-    if ((inFile = fopen(fName, "r")) EQ NULL) {
+      if ((inFile = fopen(fName, "r")) EQ NULL) {
 #endif
-      fprintf(stderr, "ERR - Unable to open file [%s] %d (%s)\n", fName, errno,
-              strerror(errno));
-      return (EXIT_FAILURE);
+        fprintf(stderr, "ERR - Unable to open file [%s] %d (%s)\n", fName, errno,
+                strerror(errno));
+        return (EXIT_FAILURE);
     }
   }
-
+  }
+  
   /* XXX should switch to file offsets instead of line numbers, will speed up the index searches */
- 
-  while (fgets(inBuf, sizeof(inBuf), inFile) != NULL && !quit) {
-    if (reload EQ TRUE) {
+
+  while ( ( ( isGz ) ? gzgets( gzInFile, inBuf, sizeof( inBuf ) ) : fgets(inBuf, sizeof(inBuf), inFile) ) != NULL && ! quit ) {
+      
+  //while (fgets(inBuf, sizeof(inBuf), inFile) != NULL && !quit) {
+
+      if (reload EQ TRUE) {
       fprintf(stderr, "Processed %d lines/min\n", lineCount);
 #ifdef DEBUG
       if (config->debug) {
@@ -258,9 +278,13 @@ int processFile(const char *fName) {
   }
 #endif
 
-  if (inFile != stdin)
-    fclose(inFile);
-
+  if (inFile != stdin) {
+      if ( isGz )
+          gzclose( gzInFile );
+      else
+        fclose(inFile);
+  }
+  
   deInitParser();
 
   return (EXIT_SUCCESS);

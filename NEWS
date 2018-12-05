@@ -5,3 +5,8 @@ Version 0.1 (July 31, 2017):
 Version 0.2 (August 17, 2017):
 
 * Implimented indexing of all instances of a network address
+
+Version 0.4 (December 5, 2018):
+
+* Added support for gzip compressed files
+

@@ -5,3 +5,8 @@
 2017-08-17  Ron Dilley <ron.dilley@uberadmin.com>
 
 	* Added full indexing of all network address instances
+
+2018-12-05  Ron Dilley <ron.dilley@uberadmin.com>
+
+	* Added support for gzip files
+

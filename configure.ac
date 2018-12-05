@@ -61,6 +61,34 @@ AC_ARG_ENABLE(gprof,
       fi
     ],)
 
+AC_ARG_WITH(zlib,
+	AC_HELP_STRING([--with-zlib],[allow zlib compressed modules (default=yes)]),,with_zlib=yes)
+
+if test x$with_zlib  = xyes; then
+	AC_CHECK_LIB(z, compress,,with_zlib="no")
+else
+	with_zlib="no"
+fi
+
+if test x$with_zlib = xno; then
+	AM_CFLAGS="$AM_CFLAGS -DEXCLUDEZLIB"
+	AM_CXXFLAGS="$AM_CXXFLAGS -DEXCLUDEZLIB"
+fi
+
+AC_ARG_WITH(bzip2,
+	AC_HELP_STRING([--with-bzip2],[allow bzip2 compressed modules (default=no)]),,with_bzip2=no)
+	
+if test x$with_bzip2  = xyes; then
+	AC_CHECK_LIB(bz2, BZ2_bzBuffToBuffCompress,,with_bzip2="no")
+else
+	with_bzip2="no"
+fi
+
+if test x$with_bzip2 = xno; then
+	AM_CFLAGS="$AM_CFLAGS -DEXCLUDEBZIP2"
+	AM_CXXFLAGS="$AM_CXXFLAGS -DEXCLUDEBZIP2"
+fi
+
 dnl ############# System Dependencies
 
 AC_MSG_CHECKING([for special system dependencies])
@@ -122,6 +150,7 @@ esac
 
 dnl ############## Header Checks
 AC_HEADER_DIRENT
+AC_CHECK_HEADER_STDBOOL
 AC_CHECK_HEADERS([arpa/inet.h])
 AC_CHECK_HEADERS([fcntl.h])
 AC_CHECK_HEADERS([netdb.h])
@@ -165,6 +194,7 @@ AC_CHECK_HEADERS([unistd.h])
 AC_CHECK_HEADERS([vfork.h])
 AC_CHECK_HEADERS([libintl.h])
 AC_CHECK_HEADERS([wchar.h])
+AC_CHECK_HEADERS([zlib.h])
 
 dnl ############## Function checks
 AC_CHECK_FUNCS([getopt_long])
@@ -189,6 +219,7 @@ AC_CHECK_FUNCS([strstr])
 AC_CHECK_FUNCS([strtol])
 AC_CHECK_FUNCS([strncat])
 AC_CHECK_FUNCS([strlcat])
+AC_CHECK_FUNCS([strrchr])
 AC_CHECK_FUNC(gethostbyname, , AC_CHECK_LIB(nsl, gethostbyname))
 AC_CHECK_FUNC(socket, , AC_CHECK_LIB(socket, socket))
 AC_FUNC_CLOSEDIR_VOID
