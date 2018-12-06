@@ -107,9 +107,9 @@ Where there will be one or more line/offset pairs.
 Searching using the pseudo indexes is simplified by using searchpi (spi).
 
 $ ./spi --help
-spi v0.3 [Mar 17 2018 - 17:27:18]
+spi v0.4 [Dec  5 2018 - 15:16:38]
 
-syntax: logpi [options] searchterm[,searchterm] filename [filename ...]
+syntax: spi [options] searchterm[,searchterm] filename [filename ...]
  -d|--debug (0-9)       enable debugging info
  -f|--file {fname}      use search terms stored in a file
  -h|--help              this info

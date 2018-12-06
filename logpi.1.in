@@ -34,7 +34,7 @@ Display help details.
 Show version information.
 .TP
 .B \-w
-Save templates to a file.
+Save index to a file.
 .TP
 .B filename
 One or more files to process, us '\-' to read from stdin.
