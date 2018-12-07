@@ -176,7 +176,7 @@ int searchFile(const char *fName) {
 int loadIndexFile(const char *fName) {
   FILE *inFile = NULL;
   char inBuf[8192];
-  char *tok;
+  char *tok, *tmpTok;
   int i, done = FALSE;
   int match = FALSE;
   size_t a;
@@ -198,6 +198,9 @@ int loadIndexFile(const char *fName) {
     /* XXX test to see if the address matches a search term */
     /* XXX should impliment a high-speed search like boyer-moore */
     /* XXX this function does not handle multiple matches */
+	
+	/* need to convert from strtok to something that can handle very long lines */
+	  
     tok = strtok(inBuf, ",");
     for (i = 0; config->search_terms[i] != NULL; i++) {
       // printf( "Searching for %s\n", config->search_terms[i]);
@@ -205,7 +208,11 @@ int loadIndexFile(const char *fName) {
         if (XMEMCMP(config->search_terms[i], tok,
                     strlen(config->search_terms[i])) EQ 0) {
           match++;
-          count = atol(strtok(NULL, ","));
+          count = strtoll(strtok(NULL, ","), &tmpTok, 10);
+			if ( ( errno EQ ERANGE && (count EQ LONG_MAX || count EQ LONG_MIN ) ) | ( errno != 0 && count EQ 0 ) ) {
+				perror("stdtol");
+				exit(EXIT_FAILURE);
+			}
           config->match_offsets =
               XREALLOC(config->match_offsets,
                        (config->match_count + 1 + count) * sizeof(size_t));
@@ -213,7 +220,11 @@ int loadIndexFile(const char *fName) {
           for (a = config->match_count; a < (config->match_count + count);
                a++) {
             tok = strtok(NULL, ",");
-            config->match_offsets[a] = atol(tok);
+            config->match_offsets[a] = strtoll(tok, &tmpTok, 10 );
+			if ( ( errno EQ ERANGE && (config->match_offsets[a] EQ LONG_MAX || config->match_offsets[a] EQ LONG_MIN ) ) | ( errno != 0 && config->match_offsets[a] EQ 0 ) ) {
+				perror("stdtol");
+				exit(EXIT_FAILURE);
+			}
             // printf("%d %zu\n", a, config->match_offsets[a]);
 
             // printf("Offset: %zu\n", config->match_offsets[i]);
