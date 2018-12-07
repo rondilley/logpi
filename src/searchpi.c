@@ -177,8 +177,9 @@ int loadIndexFile(const char *fName) {
   FILE *inFile = NULL;
   char inBuf[8192];
   char *tok;
-  int i, a, done = FALSE;
+  int i, done = FALSE;
   int match = FALSE;
+  size_t a;
   size_t *offsets;
   size_t count;
 
@@ -204,7 +205,7 @@ int loadIndexFile(const char *fName) {
         if (XMEMCMP(config->search_terms[i], tok,
                     strlen(config->search_terms[i])) EQ 0) {
           match++;
-          count = atoi(strtok(NULL, ","));
+          count = atol(strtok(NULL, ","));
           config->match_offsets =
               XREALLOC(config->match_offsets,
                        (config->match_count + 1 + count) * sizeof(size_t));
@@ -212,7 +213,7 @@ int loadIndexFile(const char *fName) {
           for (a = config->match_count; a < (config->match_count + count);
                a++) {
             tok = strtok(NULL, ",");
-            config->match_offsets[a] = atoi(tok);
+            config->match_offsets[a] = atol(tok);
             // printf("%d %zu\n", a, config->match_offsets[a]);
 
             // printf("Offset: %zu\n", config->match_offsets[i]);
@@ -245,8 +246,8 @@ int loadIndexFile(const char *fName) {
  *
  ****/
 
-void quickSort(size_t *number, int first, int last) {
-  int i, j, pivot;
+void quickSort(size_t *number, size_t first, size_t last) {
+  size_t i, j, pivot;
   size_t temp;
 
   if (first < last) {

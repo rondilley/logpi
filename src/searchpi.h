@@ -89,7 +89,7 @@ int processFile(const char *fName);
 int searchFile(const char *fName);
 int loadIndexFile(const char *fName);
 int loadSearchFile(const char *fName);
-void quickSort(size_t *number, int first, int last);
+void quickSort(size_t *number, size_t first, size_t last);
 int showAddresses(void);
 
 #endif /* LOGPI_DOT_H */
