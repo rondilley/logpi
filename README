@@ -5,9 +5,9 @@ by Ron Dilley <ron.dilley@uberadmin.com>
 For the latest information on logpi, please see:
 http://www.uberadmin.com/Projects/logpi/
 
-== What is Log Peudo Indexer (logpi)?
+== What is Log Pseudo Indexer (logpi)?
 
-Logpi parses text log files and outputs occurences of commong network
+Logpi parses text log files and outputs occurences of common network
 addressess including IPv4, IPv6 and MAC addresses.  These pseudo index or
 metadata files can be used to accelerate searching large log data sets
 for network addresses.

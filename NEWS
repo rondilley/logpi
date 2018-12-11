@@ -10,3 +10,7 @@ Version 0.4 (December 5, 2018):
 
 * Added support for gzip compressed files
 
+Version 0.5 (December 10, 2018):
+
+* Minor bug fixes
+

@@ -175,7 +175,7 @@ int searchFile(const char *fName) {
 
 int loadIndexFile(const char *fName) {
   FILE *inFile = NULL;
-  char inBuf[8192];
+  char inBuf[65536];
   char *tok, *tmpTok;
   int i, done = FALSE;
   int match = FALSE;
@@ -194,54 +194,51 @@ int loadIndexFile(const char *fName) {
     return (EXIT_FAILURE);
   }
 
-  while ((fgets(inBuf, sizeof(inBuf), inFile) != NULL) && !done) {
-    /* XXX test to see if the address matches a search term */
-    /* XXX should impliment a high-speed search like boyer-moore */
-    /* XXX this function does not handle multiple matches */
-	
-	/* need to convert from strtok to something that can handle very long lines */
-	  
-    tok = strtok(inBuf, ",");
-    for (i = 0; config->search_terms[i] != NULL; i++) {
-      // printf( "Searching for %s\n", config->search_terms[i]);
-      if (strlen(config->search_terms[i]) EQ strlen(tok)) {
-        if (XMEMCMP(config->search_terms[i], tok,
-                    strlen(config->search_terms[i])) EQ 0) {
-          match++;
-          count = strtoll(strtok(NULL, ","), &tmpTok, 10);
-			if ( ( errno EQ ERANGE && (count EQ LONG_MAX || count EQ LONG_MIN ) ) | ( errno != 0 && count EQ 0 ) ) {
-				perror("stdtol");
-				exit(EXIT_FAILURE);
-			}
-          config->match_offsets =
-              XREALLOC(config->match_offsets,
-                       (config->match_count + 1 + count) * sizeof(size_t));
-          fprintf(stderr, "MATCH [%s] with %zu lines\n", inBuf, count);
-          for (a = config->match_count; a < (config->match_count + count);
-               a++) {
-            tok = strtok(NULL, ",");
-            config->match_offsets[a] = strtoll(tok, &tmpTok, 10 );
-			if ( ( errno EQ ERANGE && (config->match_offsets[a] EQ LONG_MAX || config->match_offsets[a] EQ LONG_MIN ) ) | ( errno != 0 && config->match_offsets[a] EQ 0 ) ) {
-				perror("stdtol");
-				exit(EXIT_FAILURE);
-			}
-            // printf("%d %zu\n", a, config->match_offsets[a]);
-
-            // printf("Offset: %zu\n", config->match_offsets[i]);
+  while (fgets(inBuf, sizeof(inBuf), inFile) != NULL) {
+    /* XXX should impliment a high-speed search */
+    /* XXX this function need to stop when all terms are found */
+    /* XXX this is a short term fix for long records */
+    /* XXX need to switch to fread and process buffer */
+    if (strlen(inBuf) < sizeof(inBuf)-1) {
+      tok = strtok(inBuf, ",");
+      for (i = 0; config->search_terms[i] != NULL; i++) {
+        // printf( "Searching for %s\n", config->search_terms[i]);
+        if (strlen(config->search_terms[i]) EQ strlen(tok)) {
+          if (XMEMCMP(config->search_terms[i], tok,
+                      strlen(config->search_terms[i])) EQ 0) {
+            match++;
+            count = strtoll(strtok(NULL, ","), &tmpTok, 10);
+            if ((errno EQ ERANGE && (count EQ LONG_MAX || count EQ LONG_MIN)) |
+                (errno != 0 && count EQ 0)) {
+              perror("stdtol");
+              exit(EXIT_FAILURE);
+            }
+            config->match_offsets =
+                XREALLOC(config->match_offsets,
+                         (config->match_count + 1 + count) * sizeof(size_t));
+            fprintf(stderr, "MATCH [%s] with %zu lines\n", inBuf, count);
+            for (a = config->match_count; a < (config->match_count + count);
+                 a++) {
+              tok = strtok(NULL, ",");
+              config->match_offsets[a] = strtoll(tok, &tmpTok, 10);
+              if ((errno EQ ERANGE && (config->match_offsets[a] EQ LONG_MAX ||
+                                       config->match_offsets[a] EQ LONG_MIN)) |
+                  (errno != 0 && config->match_offsets[a] EQ 0)) {
+                perror("stdtol");
+                exit(EXIT_FAILURE);
+              }
+            }
+            config->match_count += count;
           }
-          config->match_count += count;
         }
       }
-    }
-    if (match EQ i)
-      done = TRUE;
+    } else
+      fprintf(stderr, "ERR - Index too large, ignoring\n");
   }
 
   /* sort the offset list */
-  quickSort(config->match_offsets, 0, config->match_count - 1);
-
-  // for (i = 0; i < config->match_count; i++)
-  //  printf("Match: [%d] %zu\n", i, config->match_offsets[i]);
+  if ( config->match_count > 1 )
+	  quickSort(config->match_offsets, 0, config->match_count - 1);
 
   fclose(inFile);
 
