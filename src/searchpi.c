@@ -179,7 +179,7 @@ int searchFile(const char *fName) {
 
 int loadIndexFile(const char *fName) {
   FILE *inFile = NULL;
-  char inBuf[8192], *tok, *sol, *endPtr, *eol, *lineBuf = NULL;
+  char inBuf[65536], *tok, *sol, *endPtr, *eol, *lineBuf = NULL;
   int i, done = FALSE, match = FALSE;
   size_t a, count, linePos = 0, *offsets, rCount, rLeft, lineBufSize = 0;
 
@@ -263,13 +263,6 @@ int loadIndexFile(const char *fName) {
                 exit(EXIT_FAILURE);
               }
             }
-            if (a != count) {
-              fprintf(stderr,
-                      "ERR - Index is corrupt: found [%lu] expected [%lu] in "
-                      "[%s]\n",
-                      a, count, lineBuf);
-              exit(EXIT_FAILURE);
-            }
             config->match_count += count;
           }
         }
@@ -329,7 +322,7 @@ int loadIndexFile(const char *fName) {
 #endif
 
     // quickSort(config->match_offsets, 0, config->match_count - 1);
-    bubbleSort(config->match_offsets, config->match_count - 1);
+    bubbleSort(config->match_offsets, config->match_count);
   }
 
   fclose(inFile);
@@ -358,48 +351,6 @@ void bubbleSort(size_t list[], size_t n) {
         list[d + 1] = t;
       }
     }
-  }
-}
-
-/****
- *
- * quick sort the offset array
- *
- ****/
-
-// This function swaps values pointed by xp and yp
-void swap(size_t *xp, size_t *yp) {
-  int temp = *xp;
-  *xp = *yp;
-  *yp = temp;
-}
-
-size_t partition(size_t arr[], size_t low, size_t high) {
-  size_t pivot = arr[high]; // pivot
-  size_t i = (low - 1);     // Index of smaller element
-
-  for (size_t j = low; j <= high - 1; j++) {
-    // If current element is smaller than or
-    // equal to pivot
-    if (arr[j] <= pivot) {
-      i++; // increment index of smaller element
-      swap(&arr[i], &arr[j]);
-    }
-  }
-  swap(&arr[i + 1], &arr[high]);
-  return (i + 1);
-}
-
-void quickSort(size_t arr[], size_t low, size_t high) {
-  if (low < high) {
-    /* pi is partitioning index, arr[p] is now
-       at right place */
-    size_t pi = partition(arr, low, high);
-
-    // Separately sort elements before
-    // partition and after partition
-    quickSort(arr, low, pi - 1);
-    quickSort(arr, pi + 1, high);
   }
 }
 
