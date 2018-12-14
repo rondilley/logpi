@@ -89,7 +89,11 @@ int searchFile(const char *fName) {
       (strncmp(foundPtr, ".gz", 3) EQ 0)) {
     isGz = TRUE;
     strncpy(indexBaseFileName, fName, foundPtr - fName);
-    printf("DEBUG - IDXBase: %s\n", indexBaseFileName);
+    indexBaseFileName[foundPtr - fName] = '\0';
+#ifdef DEBUG
+    if (config->debug >= 1)
+      fprintf(stderr, "DEBUG - IDXBase: %s\n", indexBaseFileName);
+#endif
   }
 
   sprintf(indexFileName, "%s.lpi", fName);
@@ -175,15 +179,15 @@ int searchFile(const char *fName) {
 
 int loadIndexFile(const char *fName) {
   FILE *inFile = NULL;
-  char inBuf[65536];
-  char *tok, *tmpTok;
-  int i, done = FALSE;
-  int match = FALSE;
-  size_t a;
-  size_t *offsets;
-  size_t count;
+  char inBuf[8192], *tok, *sol, *endPtr, *eol, *lineBuf = NULL;
+  int i, done = FALSE, match = FALSE;
+  size_t a, count, linePos = 0, *offsets, rCount, rLeft, lineBufSize = 0;
 
-  fprintf(stderr, "Opening [%s] for read\n", fName);
+#ifdef DEBUG
+  if (config->debug >= 1)
+    fprintf(stderr, "Opening [%s] for read\n", fName);
+#endif
+
 #ifdef HAVE_FOPEN64
   if ((inFile = fopen64(fName, "r")) EQ NULL) {
 #else
@@ -194,51 +198,139 @@ int loadIndexFile(const char *fName) {
     return (EXIT_FAILURE);
   }
 
-  while (fgets(inBuf, sizeof(inBuf), inFile) != NULL) {
-    /* XXX should impliment a high-speed search */
-    /* XXX this function need to stop when all terms are found */
-    /* XXX this is a short term fix for long records */
-    /* XXX need to switch to fread and process buffer */
-    if (strlen(inBuf) < sizeof(inBuf)-1) {
-      tok = strtok(inBuf, ",");
+  while ((rCount = fread(inBuf, 1, sizeof(inBuf), inFile)) > 0) {
+#ifdef DEBUG
+    if (config->debug >= 7)
+      fprintf(stderr, "DEBUG - Read [%lu] bytes\n", rCount);
+#endif
+
+    sol = inBuf;
+    rLeft = rCount;
+    while ((rLeft) && ((eol = strchr(sol, '\n')) != NULL)) {
+
+#ifdef DEBUG
+      if (config->debug >= 5)
+        fprintf(stderr, "DEBUG - Index record found\n");
+#endif
+
+      /* copy bytes (sol to eol) to lineBuf */
+      lineBufSize += (eol - sol);
+#ifdef DEBUG
+      if (config->debug >= 6)
+        fprintf(stderr, "DEBUG - Line Buf: [%lu]\n", lineBufSize);
+#endif
+
+      if ((lineBuf = XREALLOC(lineBuf, lineBufSize + 1)) EQ NULL) {
+        fprintf(stderr,
+                "ERR - Unable to allocate memory for index buffer [%lu]\n",
+                lineBufSize);
+        exit(EXIT_FAILURE);
+      }
+      XMEMCPY(lineBuf + linePos, sol, eol - sol);
+      lineBuf[lineBufSize] = '\0';
+
+#ifdef DEBUG
+      if (config->debug >= 9)
+        printf("%s\n", lineBuf);
+#endif
+
+      /* process line */
+      tok = strtok(lineBuf, ",");
+
+#ifdef DEBUG
+      if (config->debug >= 2)
+        fprintf(stderr, "TOK: %s\n", tok);
+#endif
+
       for (i = 0; config->search_terms[i] != NULL; i++) {
         // printf( "Searching for %s\n", config->search_terms[i]);
         if (strlen(config->search_terms[i]) EQ strlen(tok)) {
           if (XMEMCMP(config->search_terms[i], tok,
                       strlen(config->search_terms[i])) EQ 0) {
             match++;
-            count = strtoll(strtok(NULL, ","), &tmpTok, 10);
-            if ((errno EQ ERANGE && (count EQ LONG_MAX || count EQ LONG_MIN)) |
-                (errno != 0 && count EQ 0)) {
-              perror("stdtol");
-              exit(EXIT_FAILURE);
-            }
+            count = strtoll(strtok(NULL, ","), &endPtr, 10);
+
             config->match_offsets =
                 XREALLOC(config->match_offsets,
-                         (config->match_count + 1 + count) * sizeof(size_t));
-            fprintf(stderr, "MATCH [%s] with %zu lines\n", inBuf, count);
+                         (config->match_count + count + 1) * sizeof(size_t));
+            fprintf(stderr, "MATCH [%s] with %zu lines\n", lineBuf, count);
             for (a = config->match_count; a < (config->match_count + count);
                  a++) {
-              tok = strtok(NULL, ",");
-              config->match_offsets[a] = strtoll(tok, &tmpTok, 10);
-              if ((errno EQ ERANGE && (config->match_offsets[a] EQ LONG_MAX ||
-                                       config->match_offsets[a] EQ LONG_MIN)) |
-                  (errno != 0 && config->match_offsets[a] EQ 0)) {
-                perror("stdtol");
+              if ((tok = strtok(NULL, ",")) != NULL)
+                config->match_offsets[a] = strtoll(tok, &endPtr, 10);
+              else {
+                fprintf(stderr, "ERR - Index is corrupt [%s]\n", lineBuf);
                 exit(EXIT_FAILURE);
               }
+            }
+            if (a != count) {
+              fprintf(stderr,
+                      "ERR - Index is corrupt: found [%lu] expected [%lu] in "
+                      "[%s]\n",
+                      a, count, lineBuf);
+              exit(EXIT_FAILURE);
             }
             config->match_count += count;
           }
         }
       }
-    } else
-      fprintf(stderr, "ERR - Index too large, ignoring\n");
+
+      /* reset lineBuf */
+      rLeft -= (eol - sol) + 1;
+      sol = eol + 1;
+      lineBufSize = 0;
+      linePos = 0;
+      XFREE(lineBuf);
+      lineBuf = NULL;
+    }
+
+    if (rLeft) {
+#ifdef DEBUG
+      if (config->debug >= 3)
+        fprintf(stderr, "Overflow [%lu] bytes saved\n", rLeft);
+#endif
+      /* copy remainder from sol to end of inBuf to lineBuf */
+      lineBufSize += rLeft;
+      /* XXX should use XREALLOC */
+      if ((lineBuf = realloc(lineBuf, lineBufSize + 1)) EQ NULL) {
+        fprintf(stderr,
+                "ERR - Unable to allocate memory for index buffer [%lu]\n",
+                lineBufSize);
+        exit(EXIT_FAILURE);
+      }
+      XMEMCPY(lineBuf + linePos, sol, rLeft);
+      linePos += rLeft;
+      lineBuf[lineBufSize] = '\0';
+    }
   }
 
+#ifdef DEBUG
+  if (config->debug >= 9) {
+    for (a = 0; a < config->match_count; a++)
+      printf("OFF[%lu] VAL[%lu]\n", a, config->match_offsets[a]);
+  }
+  fflush(stdout);
+#endif
+
+#ifdef DEBUG
+  if (config->debug >= 4) {
+    if (linePos > 0) {
+      fprintf(stderr, "DEBUG - Extra [%s]\n", lineBuf);
+    }
+  }
+#endif
+
   /* sort the offset list */
-  if ( config->match_count > 1 )
-	  quickSort(config->match_offsets, 0, config->match_count - 1);
+  if (config->match_count > 1) {
+
+#ifdef DEBUG
+    if (config->debug >= 4)
+      fprintf(stderr, "DEBUG - Match count: %lu\n", config->match_count);
+#endif
+
+    // quickSort(config->match_offsets, 0, config->match_count - 1);
+    bubbleSort(config->match_offsets, config->match_count - 1);
+  }
 
   fclose(inFile);
 
@@ -250,36 +342,64 @@ int loadIndexFile(const char *fName) {
 
 /****
  *
+ * bubble sort the offset array
+ *
+ ****/
+
+void bubbleSort(size_t list[], size_t n) {
+  size_t c, d, t;
+
+  for (c = 0; c < n - 1; c++) {
+    for (d = 0; d < n - c - 1; d++) {
+      if (list[d] > list[d + 1]) {
+        /* Swapping */
+        t = list[d];
+        list[d] = list[d + 1];
+        list[d + 1] = t;
+      }
+    }
+  }
+}
+
+/****
+ *
  * quick sort the offset array
  *
  ****/
 
-void quickSort(size_t *number, size_t first, size_t last) {
-  size_t i, j, pivot;
-  size_t temp;
+// This function swaps values pointed by xp and yp
+void swap(size_t *xp, size_t *yp) {
+  int temp = *xp;
+  *xp = *yp;
+  *yp = temp;
+}
 
-  if (first < last) {
-    pivot = first;
-    i = first;
-    j = last;
+size_t partition(size_t arr[], size_t low, size_t high) {
+  size_t pivot = arr[high]; // pivot
+  size_t i = (low - 1);     // Index of smaller element
 
-    while (i < j) {
-      while (number[i] <= number[pivot] && i < last)
-        i++;
-      while (number[j] > number[pivot])
-        j--;
-      if (i < j) {
-        temp = number[i];
-        number[i] = number[j];
-        number[j] = temp;
-      }
+  for (size_t j = low; j <= high - 1; j++) {
+    // If current element is smaller than or
+    // equal to pivot
+    if (arr[j] <= pivot) {
+      i++; // increment index of smaller element
+      swap(&arr[i], &arr[j]);
     }
+  }
+  swap(&arr[i + 1], &arr[high]);
+  return (i + 1);
+}
 
-    temp = number[pivot];
-    number[pivot] = number[j];
-    number[j] = temp;
-    quickSort(number, first, j - 1);
-    quickSort(number, j + 1, last);
+void quickSort(size_t arr[], size_t low, size_t high) {
+  if (low < high) {
+    /* pi is partitioning index, arr[p] is now
+       at right place */
+    size_t pi = partition(arr, low, high);
+
+    // Separately sort elements before
+    // partition and after partition
+    quickSort(arr, low, pi - 1);
+    quickSort(arr, pi + 1, high);
   }
 }
 

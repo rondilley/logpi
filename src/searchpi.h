@@ -90,6 +90,7 @@ int searchFile(const char *fName);
 int loadIndexFile(const char *fName);
 int loadSearchFile(const char *fName);
 void quickSort(size_t *number, size_t first, size_t last);
+void bubbleSort(size_t list[], size_t n);
 int showAddresses(void);
 
 #endif /* LOGPI_DOT_H */

@@ -14,3 +14,7 @@ Version 0.5 (December 10, 2018):
 
 * Minor bug fixes
 
+Version 0.6 (December 11, 2018):
+
+* Moved to block reads in searchpi
+

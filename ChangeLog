@@ -10,3 +10,7 @@
 
 	* Added support for gzip files
 
+2018-12-11  Ron Dilley <ron.dilley@uberadmin.com>
+
+	* Moved to block reads in searchpi
+
