@@ -1,4 +1,4 @@
-.TH LOGPI 1  "17 August 2017" "logpi @VERSION@" "logpi @VERSION@"
+.TH LOGPI 1  "15 December 2018" "logpi @VERSION@" "logpi @VERSION@"
 .SH NAME
 logpi \- Log Pseudo Indexer.
 .SH SYNOPSIS

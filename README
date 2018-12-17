@@ -19,7 +19,7 @@ Processing a 29gb log file on a Mac Powerbook laptop takes ~12 minutes to index 
 $ ls -la ./messages.log
 -rw-r--r--@ 1 user  staff  29187706427 Mar 16 18:43 ./messages.log
 
-$ time ./logpi -w ./messages.log.lpi ./messages.log 
+$ time logpi -w ./messages.log.lpi ./messages.log 
 Opening [./messages.log] for read
 Processed 6319938 lines/min
 Processed 5731022 lines/min
@@ -36,11 +36,10 @@ As the command above shows, the pseudo indexer is parsing and indexing ~5.7m lin
 
 The indexing is fast, but what really makes this tool useful for information security practitioners is the speed to search for address hits after the pseudo index has been generated.
 
-$ time ./spi 132.236.56.252,54.250.186.218 ./messages.log
+$ time spi 132.236.56.252,54.250.186.218 ./messages.log
 Searching for 132.236.56.252 54.250.186.218 
 Opening [./messages.log.lpi] for read
 MATCH [132.236.56.252] with 2 lines
-MATCH [54.250.186.218] with 2 lines
 Opening [./messages.log] for read
 Mar 16 00:27:07 10.143.2.123 1,2018/03/16 00:27:06,001901000402,TRAFFIC,end,1,2018/03/16 00:27:06,10.131.239.142,132.236.56.252,168.161.192.15,132.236.56.252,Allow Outbound,,,dns,vsys1,inside,outside,ethernet1/22,ethernet1/21,LA_log,2018/03/16 00:27:06,34411943,1,7001,53,38811,53,0x404019,udp,allow,211,88,123,2,2018/03/16 00:26:06,59,any,0,185835010247,0x0,10.0.0.0-10.255.255.255,US,0,1,1,aged-out,12,0,0,0,,PA1,from-policy
 Mar 16 00:39:52 10.143.2.123 1,2018/03/16 00:39:52,001901000402,THREAT,url,1,2018/03/16 00:39:52,10.146.58.93,54.250.186.218,168.161.192.16,54.250.186.218,Allow Outbound,,,ssl,vsys1,inside,outside,ethernet1/22,ethernet1/21,LA_log,2018/03/16 00:39:52,34754943,1,54989,443,25285,443,0x40f000,tcp,alert,"messenger-ws.direct.ly/",(9999),unknown,informational,client-to-server,70297609432,0x0,10.0.0.0-10.255.255.255,JP,0,,0,,,0,,,,,,,,0,12,0,0,0,,PA1,
@@ -49,12 +48,10 @@ real	0m36.670s
 user	0m6.904s
 sys	0m14.143s
 
-
-$ time ./spi -q 132.236.56.252,54.250.186.218 ./messages.log
+$ time spi -q 132.236.56.252,54.250.186.218 ./messages.log
 Searching for 132.236.56.252 54.250.186.218 
 Opening [./messages.log.lpi] for read
 MATCH [132.236.56.252] with 2 lines
-MATCH [54.250.186.218] with 2 lines
 
 real	0m0.010s
 user	0m0.002s
@@ -78,8 +75,7 @@ indexing everything, then this is the tool for you.
 
 Running the command line tool is simple:
 
-$ ./logpi --help
-logpi v0.4 [Dec  5 2018 - 13:20:05]
+logpi v0.7 [Dec 16 2018 - 16:29:11]
 
 syntax: logpi [options] filename [filename ...]
  -d|--debug (0-9)       enable debugging info
@@ -89,7 +85,7 @@ syntax: logpi [options] filename [filename ...]
  -w|--write {file}      save metadata to file
  filename               one or more files to process, use '-' to read from stdin
 
-$ ./src/logpi /var/log/syslog
+$ logpi /var/log/syslog
 Opening [/var/log/syslog] for read
 192.168.103.2,20,401:11,382:11,350:11,332:11,313:11,295:11,271:11,253:11,235:11,216:11,197:11,172:11,154:11,135:11,117:11,94:11,76:11,58:11,39:11,20:11
 192.168.103.133,80,408:9,399:11,398:9,397:9,391:9,380:11,379:9,378:9,356:9,348:11,347:9,346:9,340:9,330:11,329:9,328:9,322:9,311:11,310:9,309:9,304:9,293:11,292:9,291:9,278:9,269:11,268:9,267:9,261:9,251:11,250:9,249:9,244:9,233:11,232:9,231:9,218:9,214:11,213:9,212:9,204:9,195:11,194:9,193:9,181:9,170:11,169:9,168:9,162:9,152:11,151:9,150:9,142:9,133:11,132:9,131:9,125:9,115:11,114:9,113:9,103:9,92:11,91:9,90:9,85:9,74:11,73:9,72:9,66:9,56:11,55:9,54:9,47:9,37:11,36:9,35:9,29:9,18:11,17:9,16:9
@@ -106,8 +102,7 @@ Where there will be one or more line/offset pairs.
 
 Searching using the pseudo indexes is simplified by using searchpi (spi).
 
-$ ./spi --help
-spi v0.4 [Dec  5 2018 - 15:16:38]
+spi v0.7 [Dec 16 2018 - 16:29:13]
 
 syntax: spi [options] searchterm[,searchterm] filename [filename ...]
  -d|--debug (0-9)       enable debugging info
@@ -118,6 +113,30 @@ syntax: spi [options] searchterm[,searchterm] filename [filename ...]
  searchterm             a comma separated list of search terms
  filename               one or more files to process, use '-' to read from stdin
 
+To search using a pseudo index, use the seachpi (spi) command and specify your terms 
+on the command line, or in a file and use the '-f|--file' option.  The two following
+examples are equivalent.
+
+$ spi 132.236.56.252,54.250.186.218 ./messages.log
+Searching for 132.236.56.252 54.250.186.218 
+Opening [./messages.log.lpi] for read
+MATCH [132.236.56.252] with 2 lines
+Opening [./messages.log] for read
+Mar 16 00:27:07 10.143.2.123 1,2018/03/16 00:27:06,001901000402,TRAFFIC,end,1,2018/03/16 00:27:06,10.131.239.142,132.236.56.252,168.161.192.15,132.236.56.252,Allow Outbound,,,dns,vsys1,inside,outside,ethernet1/22,ethernet1/21,LA_log,2018/03/16 00:27:06,34411943,1,7001,53,38811,53,0x404019,udp,allow,211,88,123,2,2018/03/16 00:26:06,59,any,0,185835010247,0x0,10.0.0.0-10.255.255.255,US,0,1,1,aged-out,12,0,0,0,,PA1,from-policy
+Mar 16 00:39:52 10.143.2.123 1,2018/03/16 00:39:52,001901000402,THREAT,url,1,2018/03/16 00:39:52,10.146.58.93,54.250.186.218,168.161.192.16,54.250.186.218,Allow Outbound,,,ssl,vsys1,inside,outside,ethernet1/22,ethernet1/21,LA_log,2018/03/16 00:39:52,34754943,1,54989,443,25285,443,0x40f000,tcp,alert,"messenger-ws.direct.ly/",(9999),unknown,informational,client-to-server,70297609432,0x0,10.0.0.0-10.255.255.255,JP,0,,0,,,0,,,,,,,,0,12,0,0,0,,PA1,
+
+$ cat ./searchterms.txt 
+132.236.56.25
+254.250.186.218
+$ spi -f ./searchterms.txt ./messages.log
+Searching for 132.236.56.252 54.250.186.218 
+Opening [./messages.log.lpi] for read
+MATCH [132.236.56.252] with 2 lines
+Opening [./messages.log] for read
+Mar 16 00:27:07 10.143.2.123 1,2018/03/16 00:27:06,001901000402,TRAFFIC,end,1,2018/03/16 00:27:06,10.131.239.142,132.236.56.252,168.161.192.15,132.236.56.252,Allow Outbound,,,dns,vsys1,inside,outside,ethernet1/22,ethernet1/21,LA_log,2018/03/16 00:27:06,34411943,1,7001,53,38811,53,0x404019,udp,allow,211,88,123,2,2018/03/16 00:26:06,59,any,0,185835010247,0x0,10.0.0.0-10.255.255.255,US,0,1,1,aged-out,12,0,0,0,,PA1,from-policy
+Mar 16 00:39:52 10.143.2.123 1,2018/03/16 00:39:52,001901000402,THREAT,url,1,2018/03/16 00:39:52,10.146.58.93,54.250.186.218,168.161.192.16,54.250.186.218,Allow Outbound,,,ssl,vsys1,inside,outside,ethernet1/22,ethernet1/21,LA_log,2018/03/16 00:39:52,34754943,1,54989,443,25285,443,0x40f000,tcp,alert,"messenger-ws.direct.ly/",(9999),unknown,informational,client-to-server,70297609432,0x0,10.0.0.0-10.255.255.255,JP,0,,0,,,0,,,,,,,,0,12,0,0,0,,PA1,
+
+The searchpi (spi) command will decompress files that are zlib compressed and have an '*.gz' extension.
 
 == Bugs
 

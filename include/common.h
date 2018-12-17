@@ -80,7 +80,19 @@ typedef unsigned char byte;
 typedef unsigned int word;
 typedef unsigned long dword;
 
-/* prog config */
+/* search term linked list structure */
+struct searchTerm_s {
+  struct searchTerm_s *prev;
+  struct searchTerm_s *next;
+  char *term;
+  int len;
+};
+
+/****
+ *
+ * global configuration settings
+ * 
+ ****/
 
 typedef struct {
   uid_t starting_uid;
@@ -90,6 +102,8 @@ typedef struct {
   char *log_dir;
   char *search_filename;
   char **search_terms;
+  struct searchTerm_s *searchHead;
+  struct searchTerm_s *searchTail;
   FILE *syslog_st;
   char *hostname;
   char *domainname;

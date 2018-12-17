@@ -68,12 +68,14 @@ extern int loadSearchFile(const char *fName);
  *
  ****/
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
   FILE *inFile = NULL, *outFile = NULL;
   char inBuf[8192];
   char outFileName[PATH_MAX];
   PRIVATE int c = 0, i, ret;
   char *tok;
+  struct searchTerm_s *searchPtr;
 
 #ifndef DEBUG
   struct rlimit rlim;
@@ -96,7 +98,8 @@ int main(int argc, char *argv[]) {
   config->gid = getgid();
   config->uid = getuid();
 
-  while (1) {
+  while (1)
+  {
     int this_option_optind = optind ? optind : 1;
 #ifdef HAVE_GETOPT_LONG
     int option_index = 0;
@@ -114,7 +117,8 @@ int main(int argc, char *argv[]) {
     if (c EQ - 1)
       break;
 
-    switch (c) {
+    switch (c)
+    {
 
     case 'v':
       /* show the version */
@@ -129,7 +133,7 @@ int main(int argc, char *argv[]) {
     case 'f':
       /* load search terms from file */
       config->search_filename = (char *)XMALLOC(PATH_MAX + 1);
-      XSTRNCPY(config->search_filename, optarg, strlen( optarg ) );
+      XSTRNCPY(config->search_filename, optarg, strlen(optarg));
       break;
 
     case 'h':
@@ -137,11 +141,11 @@ int main(int argc, char *argv[]) {
       print_help();
       return (EXIT_SUCCESS);
 
-	  case 'q':
-	  /* enable quick mode, don't print matching lines */
-	  config->quick = TRUE;
-	  break;
-	  
+    case 'q':
+      /* enable quick mode, don't print matching lines */
+      config->quick = TRUE;
+      break;
+
     default:
       fprintf(stderr, "Unknown option code [0%o]\n", c);
     }
@@ -149,7 +153,8 @@ int main(int argc, char *argv[]) {
 
   /* check dirs and files for danger */
 
-  if (time(&config->current_time) EQ - 1) {
+  if (time(&config->current_time) EQ - 1)
+  {
     display(LOG_ERR, "Unable to get current time");
 
     /* cleanup buffers */
@@ -161,7 +166,8 @@ int main(int argc, char *argv[]) {
   config->hostname = (char *)XMALLOC(MAXHOSTNAMELEN + 1);
 
   /* get processor hostname */
-  if (gethostname(config->hostname, MAXHOSTNAMELEN) != 0) {
+  if (gethostname(config->hostname, MAXHOSTNAMELEN) != 0)
+  {
     display(LOG_ERR, "Unable to get hostname");
     strcpy(config->hostname, "unknown");
   }
@@ -176,32 +182,53 @@ int main(int argc, char *argv[]) {
    * get to work
    */
 
-  if (config->search_filename != NULL) {
+  if (config->search_filename != NULL)
+  {
     /* load the search term(s) into an list */
     loadSearchFile(config->search_filename);
-  } else {
+  }
+  else
+  {
     /* if no search term file specified, use the first argument */
-    /* XXX use strtok to split comma separated terms */
     tok = strtok(argv[optind], ",");
-    i = 0;
-    do {
-      config->search_terms =
-          XREALLOC(config->search_terms, ((i + 2) * sizeof(char *)));
-      config->search_terms[i] = XMALLOC(strlen(tok) + 1);
-      config->search_terms[i + 1] = NULL;
-      XMEMCPY(config->search_terms[i++], tok, strlen(tok));
+
+    /* XXX move to a linked list for search terms */
+    /* parse and store search terms */
+    do
+    {
+      /* create new search term record */
+      if ((searchPtr = XMALLOC(sizeof(struct searchTerm_s))) EQ NULL)
+      {
+        fprintf(stderr, "ERR - Unable to allocate memory for search term\n");
+        exit(EXIT_FAILURE);
+      }
+      XMEMSET(searchPtr, '\0', sizeof(struct searchTerm_s));
+      searchPtr->len = strlen( tok)+1;
+      searchPtr->term = XMALLOC(searchPtr->len);
+      XMEMCPY(searchPtr->term, tok, searchPtr->len);
+
+      /* store search term in the linked list */
+      searchPtr->next = config->searchHead;
+      if ( config->searchHead != NULL )
+        config->searchHead->prev = searchPtr;
+      config->searchHead = searchPtr;
     } while ((tok = strtok(NULL, ",")) != NULL);
     optind++;
   }
 
   /* XXX need to convert addresses to numbers to allow for range matches */
   fprintf(stderr, "Searching for ");
-  for (i = 0; config->search_terms[i] != NULL; i++)
-    fprintf(stderr, "%s ", config->search_terms[i]);
+  searchPtr = config->searchHead;
+  while (searchPtr != NULL)
+  {
+    fprintf(stderr, "%s ", searchPtr->term);
+    searchPtr = searchPtr->next;
+  }
   fprintf(stderr, "\n");
 
   /* process all the files */
-  while (optind < argc) {
+  while (optind < argc)
+  {
     searchFile(argv[optind++]);
   }
 
@@ -220,7 +247,8 @@ int main(int argc, char *argv[]) {
  *
  ****/
 
-void show_info(void) {
+void show_info(void)
+{
   fprintf(stderr, "%s v%s [%s - %s]\n", PROGNAME, VERSION, __DATE__, __TIME__);
   fprintf(stderr, "By: Ron Dilley\n");
   fprintf(stderr, "\n");
@@ -237,7 +265,8 @@ void show_info(void) {
  *
  *****/
 
-PRIVATE void print_version(void) {
+PRIVATE void print_version(void)
+{
   printf("%s v%s [%s - %s]\n", PROGNAME, VERSION, __DATE__, __TIME__);
 }
 
@@ -247,13 +276,14 @@ PRIVATE void print_version(void) {
  *
  *****/
 
-PRIVATE void print_help(void) {
+PRIVATE void print_help(void)
+{
   print_version();
 
   fprintf(stderr, "\n");
   fprintf(
       stderr,
-      "syntax: spi [options] searchterm[,searchterm] filename [filename ...]\n" );
+      "syntax: spi [options] searchterm[,searchterm] filename [filename ...]\n");
 
 #ifdef HAVE_GETOPT_LONG
   fprintf(stderr, " -d|--debug (0-9)       enable debugging info\n");
@@ -286,9 +316,19 @@ PRIVATE void print_help(void) {
  *
  ****/
 
-PRIVATE void cleanup(void) {
+PRIVATE void cleanup(void)
+{
+  struct searchTerm_s *tmpPtr;
+
   /* free any match templates */
   cleanMatchList();
+
+  while ( config->searchHead != NULL ) {
+    tmpPtr = config->searchHead;
+    config->searchHead = config->searchHead->next;
+    XFREE( tmpPtr->term );
+    XFREE( tmpPtr );
+  }
 
   if (config->outFile_st != NULL)
     fclose(config->outFile_st);
@@ -306,7 +346,8 @@ PRIVATE void cleanup(void) {
  *
  *****/
 
-void ctime_prog(int signo) {
+void ctime_prog(int signo)
+{
   time_t ret;
 
   /* disable SIGALRM */

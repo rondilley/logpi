@@ -67,7 +67,8 @@ extern int reload;
  *
  ****/
 
-int searchFile(const char *fName) {
+int searchFile(const char *fName)
+{
   FILE *inFile = NULL, *outFile = NULL;
   gzFile gzInFile;
   char inBuf[8192];
@@ -80,48 +81,52 @@ int searchFile(const char *fName) {
   struct Fields_s **curFieldPtr;
   size_t offMatchPos = 0;
   size_t curMatchLine = 1;
-  int isGz = FALSE;
+  int done = FALSE, isGz = FALSE;
   char *foundPtr;
   char indexBaseFileName[PATH_MAX];
 
-  /* XXX need to look for index file first */
   if ((((foundPtr = strrchr(fName, '.')) != NULL)) &&
-      (strncmp(foundPtr, ".gz", 3) EQ 0)) {
+      (strncmp(foundPtr, ".gz", 3) EQ 0))
+  {
     isGz = TRUE;
     strncpy(indexBaseFileName, fName, foundPtr - fName);
     indexBaseFileName[foundPtr - fName] = '\0';
-#ifdef DEBUG
-    if (config->debug >= 1)
-      fprintf(stderr, "DEBUG - IDXBase: %s\n", indexBaseFileName);
-#endif
   }
 
   sprintf(indexFileName, "%s.lpi", fName);
-  if ((loadIndexFile(indexFileName) EQ EXIT_FAILURE) || config->quick) {
-    /* XXX if filename ends with '.gz', then look for different index name */
-    if (isGz && !config->quick) {
+  if ((loadIndexFile(indexFileName) EQ EXIT_FAILURE) || config->quick)
+  {
+    if (isGz && !config->quick)
+    {
       sprintf(indexFileName, "%s.lpi", indexBaseFileName);
       if (loadIndexFile(indexFileName) EQ EXIT_FAILURE)
         return (EXIT_FAILURE);
-    } else
+    }
+    else
       return (EXIT_FAILURE);
   }
-  /* XXX once index is loaded, search original file for hits */
 
+  /* XXX need to add support for bzip2 */
+  
   fprintf(stderr, "Opening [%s] for read\n", fName);
-
-  if (isGz) {
+  if (isGz)
+  {
     /* gzip compressed */
-    if ((gzInFile = gzopen(fName, "rb")) EQ NULL) {
+    if ((gzInFile = gzopen(fName, "rb")) EQ NULL)
+    {
       fprintf(stderr, "ERR - Unable to open file [%s] %d (%s)\n", fName, errno,
               strerror(errno));
       return (EXIT_FAILURE);
     }
-  } else {
+  }
+  else
+  {
 #ifdef HAVE_FOPEN64
-    if ((inFile = fopen64(fName, "r")) EQ NULL) {
+    if ((inFile = fopen64(fName, "r")) EQ NULL)
+    {
 #else
-    if ((inFile = fopen(fName, "r")) EQ NULL) {
+    if ((inFile = fopen(fName, "r")) EQ NULL)
+    {
 #endif
       fprintf(stderr, "ERR - Unable to open file [%s] %d (%s)\n", fName, errno,
               strerror(errno));
@@ -129,47 +134,40 @@ int searchFile(const char *fName) {
     }
   }
 
-  do {
+  do
+  {
     if (isGz)
       retPtr = gzgets(gzInFile, inBuf, sizeof(inBuf));
     else
       retPtr = fgets(inBuf, sizeof(inBuf), inFile);
-    // printf("%zu %zu %zu\n", curMatchLine, offMatchPos,
-    // config->match_offsets[offMatchPos]);
 
-    if (curMatchLine EQ config->match_offsets[offMatchPos]) {
+    if (curMatchLine EQ config->match_offsets[offMatchPos])
+    {
 #ifdef DEBUG
       printf("[%zu] %s", curMatchLine, inBuf);
 #else
       printf("%s", inBuf);
 #endif
-
-      while (config->match_offsets[offMatchPos] EQ curMatchLine)
-        offMatchPos++;
+      offMatchPos++;
+      if (offMatchPos >= config->match_count)
+        done = TRUE;
     }
 
     curMatchLine++;
-  } while ((retPtr != NULL) && (config->match_offsets[offMatchPos] > 0));
+  } while ((retPtr != NULL) && !done);
 
   if (isGz)
     gzclose(gzInFile);
   else
     fclose(inFile);
 
+  /* cleanup global variables so we can process more files */
+  XFREE( config->match_offsets );
+  config->match_offsets = NULL;
+  config->match_count = 0;
+
   return (EXIT_SUCCESS);
 }
-
-/****
- *
- * load index file
- *
- ****/
-
-// 2c:c5:d3:4b:a7:bc,1,45624:10
-// 58:97:bd:02:c2:ba,1,45600:10
-// 58:97:bd:02:c2:bb,1,45599:10
-// 2c:c5:d3:54:3d:9c,97,44841:10,44599:10,44395:10,44337:10,44094:10,43685:10,43440:10,43197:10,42565:10,42204:10,41964:10,41723:10,41437:10,41205:10,40871:10,40499:10,39280:10,38858:10,37631:10,37207:10,36960:10,35699:10,35437:10,35188:10,34658:10,34236:10,33985:10,32886:10,32527:10,32291:10,32057:10,31124:10,30888:10,30651:10,29718:10,29469:10,29220:10,28360:10,27989:10,27742:10,27497:10,26765:10,26342:10,26094:10,25849:10,25324:10,24897:10,24656:10,24415:10,23885:10,23467:10,23222:10,22980:10,21976:10,21726:10,21477:10,20466:10,20214:10,19973:10,19689:10,19027:10,18786:10,18545:10,18258:10,17531:10,17282:10,17036:10,16747:10,16514:10,16181:10,14706:10,14339:10,14091:10,13842:10,12883:10,12630:10,12383:10,10027:10,8274:10,7799:10,7552:10,7306:10,7062:10,6784:10,6129:10,5881:10,5633:10,5345:10,5114:10,4901:10,4484:10,4240:10,2988:10,2739:10,1772:10,1369:10,1127:10
-// 2c:c5:d3:54:1c:3c,145,44898:10,44653:10,44159:10,43742:10,43500:10,43254:10,42970:10,42739:10,42259:10,42019:10,41778:10,41495:10,41257:10,41056:10,40564:10,40314:10,40065:10,39786:10,39349:10,38921:10,38674:10,38427:10,38143:10,37903:10,37698:10,37273:10,37025:10,36775:10,36495:10,36257:10,35766:10,35514:10,35247:10,34720:10,34302:10,34051:10,33800:10,33511:10,33270:10,33069:10,32583:10,32343:10,32109:10,31595:10,31183:10,30942:10,30706:10,30427:10,30196:10,29787:10,29536:10,29283:10,28996:10,28755:10,28550:10,28052:10,27805:10,27554:10,27270:10,26405:10,26157:10,25908:10,25622:10,25389:10,24964:10,24715:10,24472:10,23952:10,23530:10,23285:10,23039:10,22756:10,22522:10,22041:10,21791:10,21539:10,21250:10,21017:10,20529:10,20272:10,20030:10,19748:10,19511:10,19088:10,18845:10,18602:10,18321:10,18080:10,17596:10,17347:10,17096:10,16812:10,16367:10,15878:10,15637:10,15398:10,14404:10,14155:10,13903:10,13608:10,13370:10,12949:10,12696:10,12441:10,12157:10,11921:10,11723:10,11306:10,11061:10,10816:10,10533:10,10296:10,10094:10,9672:10,9428:10,9185:10,8904:10,8660:10,8458:10,7862:10,7614:10,7367:10,7118:10,6836:10,6605:10,6193:10,5944:10,5694:10,5407:10,5164:10,4964:10,4546:10,4302:10,4057:10,3546:10,3055:10,2803:10,2554:10,2265:10,2030:10,1835:10,1431:10,1184:10,939:10,31:10
 
 /****
  *
@@ -177,11 +175,37 @@ int searchFile(const char *fName) {
  *
  ****/
 
-int loadIndexFile(const char *fName) {
+int loadIndexFile(const char *fName)
+{
   FILE *inFile = NULL;
   char inBuf[65536], *tok, *sol, *endPtr, *eol, *lineBuf = NULL;
-  int i, done = FALSE, match = FALSE;
+  int i, done = FALSE, match = 0;
   size_t a, count, linePos = 0, *offsets, rCount, rLeft, lineBufSize = 0;
+  struct searchTerm_s *searchHead = NULL, *searchTail = NULL, *searchPtr, *tmpPtr;
+
+  /* make a copy of the term linked list */
+  searchPtr = config->searchHead;
+  while( searchPtr != NULL ) {
+    /* create new search term record */
+    if ((tmpPtr = XMALLOC(sizeof(struct searchTerm_s))) EQ NULL)
+    {
+      fprintf(stderr, "ERR - Unable to allocate memory for search term\n");
+      exit(EXIT_FAILURE);
+    }
+    XMEMSET(tmpPtr, '\0', sizeof(struct searchTerm_s));
+    tmpPtr->len = searchPtr->len;
+    tmpPtr->term = XMALLOC(searchPtr->len + 1);
+    XSTRCPY(tmpPtr->term, searchPtr->term );
+
+    /* store search term in the linked list */
+    tmpPtr->next = searchHead;
+    if ( searchHead != NULL )
+      searchHead->prev = tmpPtr;
+    searchHead = tmpPtr;
+
+    /* advance to next source record */
+    searchPtr = searchPtr->next;
+  }
 
 #ifdef DEBUG
   if (config->debug >= 1)
@@ -189,16 +213,19 @@ int loadIndexFile(const char *fName) {
 #endif
 
 #ifdef HAVE_FOPEN64
-  if ((inFile = fopen64(fName, "r")) EQ NULL) {
+  if ((inFile = fopen64(fName, "r")) EQ NULL)
+  {
 #else
-  if ((inFile = fopen(fName, "r")) EQ NULL) {
+  if ((inFile = fopen(fName, "r")) EQ NULL)
+  {
 #endif
     fprintf(stderr, "ERR - Unable to open file [%s] %d (%s)\n", fName, errno,
             strerror(errno));
     return (EXIT_FAILURE);
   }
 
-  while ((rCount = fread(inBuf, 1, sizeof(inBuf), inFile)) > 0) {
+  while (((rCount = fread(inBuf, 1, sizeof(inBuf), inFile)) > 0) && (searchHead != NULL))
+  {
 #ifdef DEBUG
     if (config->debug >= 7)
       fprintf(stderr, "DEBUG - Read [%lu] bytes\n", rCount);
@@ -206,7 +233,8 @@ int loadIndexFile(const char *fName) {
 
     sol = inBuf;
     rLeft = rCount;
-    while ((rLeft) && ((eol = strchr(sol, '\n')) != NULL)) {
+    while (rLeft && (searchHead != NULL) && ((eol = strchr(sol, '\n')) != NULL))
+    {
 
 #ifdef DEBUG
       if (config->debug >= 5)
@@ -220,7 +248,8 @@ int loadIndexFile(const char *fName) {
         fprintf(stderr, "DEBUG - Line Buf: [%lu]\n", lineBufSize);
 #endif
 
-      if ((lineBuf = XREALLOC(lineBuf, lineBufSize + 1)) EQ NULL) {
+      if ((lineBuf = XREALLOC(lineBuf, lineBufSize + 1)) EQ NULL)
+      {
         fprintf(stderr,
                 "ERR - Unable to allocate memory for index buffer [%lu]\n",
                 lineBufSize);
@@ -235,19 +264,26 @@ int loadIndexFile(const char *fName) {
 #endif
 
       /* process line */
-      tok = strtok(lineBuf, ",");
-
+      if ( ( tok = strtok(lineBuf, ",") ) EQ NULL ) {
+        fprintf( stderr, "ERR - Index may be corrupt\n" );
+        exit( EXIT_FAILURE );
+      }
+      
 #ifdef DEBUG
       if (config->debug >= 2)
         fprintf(stderr, "TOK: %s\n", tok);
 #endif
 
-      for (i = 0; config->search_terms[i] != NULL; i++) {
-        // printf( "Searching for %s\n", config->search_terms[i]);
-        if (strlen(config->search_terms[i]) EQ strlen(tok)) {
-          if (XMEMCMP(config->search_terms[i], tok,
-                      strlen(config->search_terms[i])) EQ 0) {
-            match++;
+      /* search until term is found */
+      searchPtr = searchHead;
+      while (searchPtr != NULL)
+      {
+        count = 0;
+        if (searchPtr->len EQ strlen(tok))
+        {
+          if (XMEMCMP(searchPtr->term, tok,
+                      searchPtr->len) EQ 0)
+          {
             count = strtoll(strtok(NULL, ","), &endPtr, 10);
 
             config->match_offsets =
@@ -255,17 +291,73 @@ int loadIndexFile(const char *fName) {
                          (config->match_count + count + 1) * sizeof(size_t));
             fprintf(stderr, "MATCH [%s] with %zu lines\n", lineBuf, count);
             for (a = config->match_count; a < (config->match_count + count);
-                 a++) {
+                 a++)
+            {
               if ((tok = strtok(NULL, ",")) != NULL)
                 config->match_offsets[a] = strtoll(tok, &endPtr, 10);
-              else {
+              else
+              {
                 fprintf(stderr, "ERR - Index is corrupt [%s]\n", lineBuf);
                 exit(EXIT_FAILURE);
               }
             }
             config->match_count += count;
+            match++;
           }
         }
+
+        /* if we got a hit */
+        if (count)
+        {
+#ifdef DEBUG
+          if (config->debug >= 3)
+            fprintf(stderr, "DEBUG - Removing matched term\n");
+#endif
+          /* matched the term, remove it from the list */
+          if ((searchPtr->prev EQ NULL) && (searchPtr->next EQ NULL))
+          {
+            /* just one record left in the list */
+#ifdef DEBUG
+            if (config->debug >= 2)
+              fprintf(stderr, "DEBUG - Removing last search term\n");
+#endif
+            searchHead = searchTail = NULL;
+            XFREE(searchPtr->term);
+            XFREE(searchPtr);
+            searchPtr = NULL;
+          }
+          else if (searchPtr->next EQ NULL)
+          {
+            /* end of list */
+            searchPtr->prev->next = NULL;
+            searchTail = searchPtr->prev;
+            XFREE(searchPtr->term);
+            XFREE(searchPtr);
+            searchPtr = NULL;
+          }
+          else if (searchPtr->prev EQ NULL)
+          {
+            /* begining of list */
+            searchPtr->next->prev = NULL;
+            searchHead = searchPtr->next;
+            tmpPtr = searchPtr;
+            searchPtr = searchPtr->next;
+            XFREE(tmpPtr->term);
+            XFREE(tmpPtr);
+          }
+          else
+          {
+            /* middle of list */
+            searchPtr->next->prev = searchPtr->prev;
+            searchPtr->prev->next = searchPtr->next;
+            tmpPtr = searchPtr;
+            searchPtr = searchPtr->next;
+            XFREE(tmpPtr->term);
+            XFREE(tmpPtr);
+          }
+        }
+        else
+          searchPtr = searchPtr->next; /* advance to next record */
       }
 
       /* reset lineBuf */
@@ -277,15 +369,16 @@ int loadIndexFile(const char *fName) {
       lineBuf = NULL;
     }
 
-    if (rLeft) {
+    if (rLeft)
+    {
 #ifdef DEBUG
       if (config->debug >= 3)
         fprintf(stderr, "Overflow [%lu] bytes saved\n", rLeft);
 #endif
       /* copy remainder from sol to end of inBuf to lineBuf */
       lineBufSize += rLeft;
-      /* XXX should use XREALLOC */
-      if ((lineBuf = realloc(lineBuf, lineBufSize + 1)) EQ NULL) {
+      if ((lineBuf = XREALLOC(lineBuf, lineBufSize + 1)) EQ NULL)
+      {
         fprintf(stderr,
                 "ERR - Unable to allocate memory for index buffer [%lu]\n",
                 lineBufSize);
@@ -298,7 +391,8 @@ int loadIndexFile(const char *fName) {
   }
 
 #ifdef DEBUG
-  if (config->debug >= 9) {
+  if (config->debug >= 9)
+  {
     for (a = 0; a < config->match_count; a++)
       printf("OFF[%lu] VAL[%lu]\n", a, config->match_offsets[a]);
   }
@@ -306,26 +400,37 @@ int loadIndexFile(const char *fName) {
 #endif
 
 #ifdef DEBUG
-  if (config->debug >= 4) {
-    if (linePos > 0) {
+  if (config->debug >= 4)
+  {
+    if (linePos > 0)
+    {
       fprintf(stderr, "DEBUG - Extra [%s]\n", lineBuf);
     }
   }
 #endif
 
   /* sort the offset list */
-  if (config->match_count > 1) {
+  if (config->match_count > 1)
+  {
 
 #ifdef DEBUG
     if (config->debug >= 4)
       fprintf(stderr, "DEBUG - Match count: %lu\n", config->match_count);
 #endif
 
-    // quickSort(config->match_offsets, 0, config->match_count - 1);
     bubbleSort(config->match_offsets, config->match_count);
   }
 
   fclose(inFile);
+
+  /* cleanup temp search term list */
+  while ( searchHead != NULL ) {
+    tmpPtr = searchHead;
+    searchHead = searchHead->next;
+    XFREE( tmpPtr->term );
+    XFREE( tmpPtr );
+  }
+  searchTail = searchHead = NULL;
 
   if (match)
     return (EXIT_SUCCESS);
@@ -339,12 +444,16 @@ int loadIndexFile(const char *fName) {
  *
  ****/
 
-void bubbleSort(size_t list[], size_t n) {
+void bubbleSort(size_t list[], size_t n)
+{
   size_t c, d, t;
 
-  for (c = 0; c < n - 1; c++) {
-    for (d = 0; d < n - c - 1; d++) {
-      if (list[d] > list[d + 1]) {
+  for (c = 0; c < n - 1; c++)
+  {
+    for (d = 0; d < n - c - 1; d++)
+    {
+      if (list[d] > list[d + 1])
+      {
         /* Swapping */
         t = list[d];
         list[d] = list[d + 1];
@@ -360,31 +469,46 @@ void bubbleSort(size_t list[], size_t n) {
  *
  ****/
 
-int loadSearchFile(const char *fName) {
+int loadSearchFile(const char *fName)
+{
   FILE *inFile = NULL;
   char inBuf[8192];
   int i = 0;
+  struct searchTerm_s *searchPtr;
 
   fprintf(stderr, "Opening [%s] for read\n", fName);
 #ifdef HAVE_FOPEN64
-  if ((inFile = fopen64(fName, "r")) EQ NULL) {
+  if ((inFile = fopen64(fName, "r")) EQ NULL)
+  {
 #else
-  if ((inFile = fopen(fName, "r")) EQ NULL) {
+  if ((inFile = fopen(fName, "r")) EQ NULL)
+  {
 #endif
     fprintf(stderr, "ERR - Unable to open file [%s] %d (%s)\n", fName, errno,
             strerror(errno));
     return (EXIT_FAILURE);
   }
 
-  while (fgets(inBuf, sizeof(inBuf), inFile) != NULL) {
-    config->search_terms =
-        XREALLOC(config->search_terms, ((i + 2) * sizeof(char *)));
-    config->search_terms[i] = XMALLOC(strlen(inBuf) + 1);
-    XMEMSET(config->search_terms[i], 0, strlen(inBuf) + 1);
-    config->search_terms[i + 1] = NULL;
-    XMEMCPY(config->search_terms[i++], inBuf, strlen(inBuf) - 1);
-    if (config->debug >= 3)
-      printf("DEBUG - Before [%s]", inBuf);
+  while (fgets(inBuf, sizeof(inBuf), inFile) != NULL)
+  {
+    /* create new search term record */
+    if ((searchPtr = XMALLOC(sizeof(struct searchTerm_s))) EQ NULL)
+    {
+      fprintf(stderr, "ERR - Unable to allocate memory for search term\n");
+      exit(EXIT_FAILURE);
+    }
+    XMEMSET(searchPtr, '\0', sizeof(struct searchTerm_s));
+    searchPtr->len = strlen(inBuf);
+    searchPtr->term = XMALLOC(searchPtr->len+1);
+    XMEMCPY(searchPtr->term, inBuf, searchPtr->len);
+    if (searchPtr->term[searchPtr->len - 1] EQ '\n') {
+      searchPtr->term[searchPtr->len - 1] = '\0';
+      searchPtr->len--;
+    }
+
+    /* store search term in the linked list */
+    searchPtr->next = config->searchHead;
+    config->searchHead = searchPtr;
   }
 
   fclose(inFile);
@@ -403,7 +527,8 @@ int loadSearchFile(const char *fName) {
  *
  ****/
 
-int processFile(const char *fName) {
+int processFile(const char *fName)
+{
   FILE *inFile = NULL, *outFile = NULL;
   char inBuf[8192];
   char outFileName[PATH_MAX];
@@ -426,13 +551,18 @@ int processFile(const char *fName) {
   initParser();
 
   fprintf(stderr, "Opening [%s] for read\n", fName);
-  if (strcmp(fName, "-") EQ 0) {
+  if (strcmp(fName, "-") EQ 0)
+  {
     inFile = stdin;
-  } else {
+  }
+  else
+  {
 #ifdef HAVE_FOPEN64
-    if ((inFile = fopen64(fName, "r")) EQ NULL) {
+    if ((inFile = fopen64(fName, "r")) EQ NULL)
+    {
 #else
-    if ((inFile = fopen(fName, "r")) EQ NULL) {
+    if ((inFile = fopen(fName, "r")) EQ NULL)
+    {
 #endif
       fprintf(stderr, "ERR - Unable to open file [%s] %d (%s)\n", fName, errno,
               strerror(errno));
@@ -440,11 +570,14 @@ int processFile(const char *fName) {
     }
   }
 
-  while (fgets(inBuf, sizeof(inBuf), inFile) != NULL && !quit) {
-    if (reload EQ TRUE) {
+  while (fgets(inBuf, sizeof(inBuf), inFile) != NULL && !quit)
+  {
+    if (reload EQ TRUE)
+    {
       fprintf(stderr, "Processed %d lines/min\n", lineCount);
 #ifdef DEBUG
-      if (config->debug) {
+      if (config->debug)
+      {
         fprintf(stderr, "Line length: min=%d, max=%d, avg=%2.0f\n", minLineLen,
                 maxLineLen, (float)totLineLen / (float)lineCount);
 
@@ -458,7 +591,8 @@ int processFile(const char *fName) {
     }
 
 #ifdef DEBUG
-    if (config->debug) {
+    if (config->debug)
+    {
       lineLen = strlen(inBuf);
       totLineLen += lineLen;
       if (lineLen < minLineLen)
@@ -466,15 +600,17 @@ int processFile(const char *fName) {
       else if (lineLen > maxLineLen)
         maxLineLen = lineLen;
     }
-#endif
 
     if (config->debug >= 3)
       printf("DEBUG - Before [%s]", inBuf);
+#endif
 
-    if ((ret = parseLine(inBuf)) > 0) {
+    if ((ret = parseLine(inBuf)) > 0)
+    {
 
 #ifdef DEBUG
-      if (config->debug) {
+      if (config->debug)
+      {
         /* save arg count */
         totArgCount += ret;
         if (ret < minArgCount)
@@ -490,7 +626,8 @@ int processFile(const char *fName) {
   }
 
 #ifdef DEBUG
-  if (config->debug) {
+  if (config->debug)
+  {
     fprintf(stderr, "Line length: min=%d, max=%d, avg=%2.0f\n", minLineLen,
             maxLineLen, (float)totLineLen / (float)lineCount);
 
