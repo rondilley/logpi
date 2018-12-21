@@ -152,11 +152,9 @@ int main(int argc, char *argv[])
   }
 
   /* check dirs and files for danger */
-
   if (time(&config->current_time) EQ - 1)
   {
     display(LOG_ERR, "Unable to get current time");
-
     /* cleanup buffers */
     cleanup();
     return (EXIT_FAILURE);
@@ -192,7 +190,6 @@ int main(int argc, char *argv[])
     /* if no search term file specified, use the first argument */
     tok = strtok(argv[optind], ",");
 
-    /* XXX move to a linked list for search terms */
     /* parse and store search terms */
     do
     {
@@ -203,8 +200,8 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
       }
       XMEMSET(searchPtr, '\0', sizeof(struct searchTerm_s));
-      searchPtr->len = strlen( tok)+1;
-      searchPtr->term = XMALLOC(searchPtr->len);
+      searchPtr->len = strlen(tok);
+      searchPtr->term = XMALLOC(searchPtr->len+1);
       XMEMCPY(searchPtr->term, tok, searchPtr->len);
 
       /* store search term in the linked list */
@@ -216,6 +213,12 @@ int main(int argc, char *argv[])
     optind++;
   }
 
+  /* exit if there are no search terms */
+  if ( config->searchHead EQ NULL ) {
+    fprintf( stderr, "No search terms specified, exiting\n" );
+    return( EXIT_FAILURE );
+  }
+  
   /* XXX need to convert addresses to numbers to allow for range matches */
   fprintf(stderr, "Searching for ");
   searchPtr = config->searchHead;

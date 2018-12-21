@@ -141,8 +141,9 @@ int processFile(const char *fName) {
 
   initParser();
 
-  /* check to see if the file is compressed */
   /* XXX need to add bzip2 */
+
+  /* check to see if the file is compressed */
   if ((((foundPtr = strrchr(fName, '.')) != NULL)) &&
       (strncmp(foundPtr, ".gz", 3) EQ 0))
     isGz = TRUE;
@@ -173,7 +174,7 @@ int processFile(const char *fName) {
   }
 
   /* XXX should block read based on filesystem BS */
-  /* XXX should switch to file offsets instead of line numbers, will speed up
+  /* XXX should switch to file offsets instead of line numbers, should speed up
    * the index searches */
   while (((isGz) ? gzgets(gzInFile, inBuf, sizeof(inBuf))
                  : fgets(inBuf, sizeof(inBuf), inFile)) != NULL &&
@@ -226,8 +227,7 @@ int processFile(const char *fName) {
         getParsedField(oBuf, sizeof(oBuf), i);
         if ((oBuf[0] EQ 'i') || (oBuf[0] EQ 'I') || (oBuf[0] EQ 'm')) {
           if ((tmpRec = getHashRecord(addrHash, oBuf))
-                  EQ NULL) { // new addrHash
-                             /* store line metadata */
+                  EQ NULL) { /* store line metadata */
 
             if ((tmpMd = (metaData_t *)XMALLOC(sizeof(metaData_t))) EQ NULL) {
               fprintf(stderr, "ERR - Unable to allocate memory, aborting\n");
@@ -242,13 +242,14 @@ int processFile(const char *fName) {
             tmpMd->head->line = totLineCount;
             tmpMd->head->offset = i;
 
-            /* XXX add line number and offset */
+            /* add to the hash */
             addUniqueHashRec(addrHash, oBuf, strlen(oBuf) + 1, tmpMd);
 
-            /* XXX this is a bit overkill */
+            /* rebalance the hash if it gets too full */
             if (((float)addrHash->totalRecords / (float)addrHash->size) > 0.8)
               addrHash = dyGrowHash(addrHash);
-          } else { // update addr count
+          } else {
+            /* update the address counts */
             if (tmpRec->data != NULL) {
               tmpMd = (metaData_t *)tmpRec->data;
               tmpMd->count++;
@@ -258,8 +259,6 @@ int processFile(const char *fName) {
               tmpMd->head = tmpAddr;
               tmpMd->head->line = totLineCount;
               tmpMd->head->offset = i;
-
-              /* XXX add line number and offset */
             }
           }
         }
