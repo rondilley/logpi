@@ -74,7 +74,11 @@ CODE prioritynames[] = {
 
 extern Config_t *config;
 #ifndef SOLARIS
+# ifdef FREEBSD
+extern const CODE prioritynames[];
+# else
 extern CODE prioritynames[];
+# endif
 #endif
 extern char **environ;
 
@@ -183,7 +187,8 @@ int is_dir_safe(const char *dir) {
     if (fstat(fd->__d_fd, &f) EQ FAILED) {
 #elif OPENBSD
     if (fstat(dirfd(fd), &f) EQ FAILED) {
-
+#elif FREEBSD
+    if (fstat(dirfd(fd), &f) EQ FAILED) {        
 #else
     if (fstat(fd->dd_fd, &f) EQ FAILED) {
 #endif
@@ -215,6 +220,8 @@ int is_dir_safe(const char *dir) {
 #elif CYGWIN
   if (fchdir(start->__d_fd) EQ FAILED) {
 #elif OPENBSD
+  if (fchdir(dirfd(start)) EQ FAILED) {      
+#elif FREEBSD
   if (fchdir(dirfd(start)) EQ FAILED) {
 #else
   if (fchdir(start->dd_fd) EQ FAILED) {
