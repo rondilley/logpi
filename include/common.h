@@ -100,6 +100,7 @@ typedef struct {
   gid_t gid;
   char *home_dir;
   char *log_dir;
+  char *out_filename;
   char *search_filename;
   char **search_terms;
   struct searchTerm_s *searchHead;

@@ -85,6 +85,14 @@ int searchFile(const char *fName)
   char *foundPtr;
   char indexBaseFileName[PATH_MAX];
 
+  if ( config->out_filename != NULL ) {
+    if ( ( outFile = fopen( config->out_filename, "w" ) ) EQ NULL ) {
+      fprintf( stderr, "ERR - Unable to open file [%s]\n", config->out_filename );
+      return( EXIT_FAILURE );
+    }
+  } else
+    outFile = stdout;
+
   if ((((foundPtr = strrchr(fName, '.')) != NULL)) &&
       (strncmp(foundPtr, ".gz", 3) EQ 0))
   {
@@ -109,6 +117,7 @@ int searchFile(const char *fName)
   /* XXX need to add support for bzip2 */
   
   fprintf(stderr, "Opening [%s] for read\n", fName);
+  /* XXX switch to multiple compression types */
   if (isGz)
   {
     /* gzip compressed */
@@ -136,6 +145,7 @@ int searchFile(const char *fName)
 
   do
   {
+    /* XXX switch to multiple compression types */
     if (isGz)
       retPtr = gzgets(gzInFile, inBuf, sizeof(inBuf));
     else
@@ -144,9 +154,9 @@ int searchFile(const char *fName)
     if (curMatchLine EQ config->match_offsets[offMatchPos])
     {
 #ifdef DEBUG
-      printf("[%zu] %s", curMatchLine, inBuf);
+      fprintf(outFile, "[%zu] %s", curMatchLine, inBuf);
 #else
-      printf("%s", inBuf);
+      fprintf( outFile, "%s", inBuf);
 #endif
       offMatchPos++;
       if (offMatchPos >= config->match_count)
@@ -156,11 +166,15 @@ int searchFile(const char *fName)
     curMatchLine++;
   } while ((retPtr != NULL) && !done);
 
+  /* XXX switch to multiple compression types */
   if (isGz)
     gzclose(gzInFile);
   else
     fclose(inFile);
 
+  if ( config->out_filename != NULL )
+    fclose( outFile );
+    
   /* cleanup global variables so we can process more files */
   XFREE( config->match_offsets );
   config->match_offsets = NULL;

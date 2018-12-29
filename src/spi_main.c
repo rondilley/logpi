@@ -107,11 +107,12 @@ int main(int argc, char *argv[])
                                            {"debug", required_argument, 0, 'd'},
                                            {"file", required_argument, 0, 'f'},
                                            {"help", no_argument, 0, 'h'},
+                                           {"write", required_argument, 0, 'w'},
                                            {"quick", no_argument, 0, 'q'},
                                            {0, no_argument, 0, 0}};
-    c = getopt_long(argc, argv, "vd:f:hq", long_options, &option_index);
+    c = getopt_long(argc, argv, "vd:f:w:hq", long_options, &option_index);
 #else
-    c = getopt(argc, argv, "vd:f:hq");
+    c = getopt(argc, argv, "vd:f:w:hq");
 #endif
 
     if (c EQ - 1)
@@ -134,6 +135,12 @@ int main(int argc, char *argv[])
       /* load search terms from file */
       config->search_filename = (char *)XMALLOC(PATH_MAX + 1);
       XSTRNCPY(config->search_filename, optarg, strlen(optarg));
+      break;
+
+    case 'w':
+      /* write output to file */
+      config->out_filename = (char *)XMALLOC(PATH_MAX + 1);
+      XSTRNCPY(config->out_filename, optarg, strlen(optarg));
       break;
 
     case 'h':
@@ -295,6 +302,7 @@ PRIVATE void print_help(void)
   fprintf(stderr, " -h|--help              this info\n");
   fprintf(stderr, " -q|--quick             quick mode, report matches and counts only\n");
   fprintf(stderr, " -v|--version           display version information\n");
+  fprintf(stderr, " -w|--write {fname}     write output to file (default: stdout)\n");
   fprintf(stderr,
           " searchterm             a comma separated list of search terms\n");
   fprintf(stderr, " filename               one or more files to process, use "
@@ -305,6 +313,7 @@ PRIVATE void print_help(void)
   fprintf(stderr, " -h            this info\n");
   fprintf(stderr, " -q            quick mode, report matches and counts only\n");
   fprintf(stderr, " -v            display version information\n");
+  fprintf(stderr, " -w {fname}    write output to file (default: stdout)\n" );
   fprintf(stderr, " searchterm    a comma separated list of search terms\n");
   fprintf(stderr, " filename      one or more files to process, use '-' to "
                   "read from stdin\n");

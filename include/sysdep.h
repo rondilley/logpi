@@ -87,6 +87,10 @@
 # include <zlib.h>
 #endif
 
+#ifdef HAVE_BZ2LIB_H
+# include <bz2lib.h>
+#endif
+
 #ifdef HAVE_NETINET_IF_ETHER_H
 # include <netinet/if_ether.h>
 #endif

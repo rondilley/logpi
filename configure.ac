@@ -71,17 +71,15 @@ else
 fi
 
 if test x$with_zlib = xno; then
-	AM_CFLAGS="$AM_CFLAGS -DEXCLUDEZLIB"
-	AM_CXXFLAGS="$AM_CXXFLAGS -DEXCLUDEZLIB"
+    AC_MSG_ERROR(either specify a valid zlib installation with --with-zlib=DIR)
 fi
 
-AC_ARG_WITH(bzip2,
-	AC_HELP_STRING([--with-bzip2],[allow bzip2 compressed modules (default=no)]),,with_bzip2=no)
-	
-if test x$with_bzip2  = xyes; then
-	AC_CHECK_LIB(bz2, BZ2_bzBuffToBuffCompress,,with_bzip2="no")
-else
-	with_bzip2="no"
+AC_ARG_WITH([bz2lib],
+  AS_HELP_STRING([--without-bz2lib], [Don't build support for bzip2 through bz2lib]))
+
+if test "x$with_bz2lib" != "xno"; then
+  AC_CHECK_HEADERS([bzlib.h])
+  AC_CHECK_LIB(bz2,BZ2_bzDecompressInit)
 fi
 
 if test x$with_bzip2 = xno; then
