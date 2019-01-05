@@ -151,6 +151,11 @@ int searchFile(const char *fName)
     else
       retPtr = fgets(inBuf, sizeof(inBuf), inFile);
 
+#ifdef DEBUG
+    if ( config->debug >= 4 )
+      fprintf( stderr, "DEBUG - CURLINE: %zu OFFPOS: %zu NEXTMATCH: %zu MATCHCOUNT: %zu\n", curMatchLine, offMatchPos, config->match_offsets[offMatchPos], config->match_count );
+#endif
+
     if (curMatchLine EQ config->match_offsets[offMatchPos])
     {
 #ifdef DEBUG
@@ -158,7 +163,9 @@ int searchFile(const char *fName)
 #else
       fprintf( outFile, "%s", inBuf);
 #endif
-      offMatchPos++;
+      while ( config->match_offsets[offMatchPos] EQ curMatchLine )
+        offMatchPos++;
+         
       if (offMatchPos >= config->match_count)
         done = TRUE;
     }
@@ -408,7 +415,7 @@ int loadIndexFile(const char *fName)
   if (config->debug >= 9)
   {
     for (a = 0; a < config->match_count; a++)
-      printf("OFF[%lu] VAL[%lu]\n", a, config->match_offsets[a]);
+      printf("COUNT[%lu] LINE[%lu]\n", a, config->match_offsets[a]);
   }
   fflush(stdout);
 #endif
