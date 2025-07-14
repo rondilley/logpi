@@ -64,7 +64,7 @@
 #include <config.h>
 #endif
 
-#include <sysdep.h>
+#include "sysdep.h"
 
 #ifndef __SYSDEP_H__
 #error something is messed up
