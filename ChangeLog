@@ -14,3 +14,7 @@
 
 	* Moved to block reads in searchpi
 
+2025-07-14  Ron Dilley <ron.dilley@uberadmin.com>
+
+	* Minor security enhancements
+	* Added --enable-hardening switch

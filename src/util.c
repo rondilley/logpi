@@ -100,7 +100,7 @@ int display(int level, char *format, ...) {
   PRIVATE int i;
 
   va_start(args, format);
-  vsprintf(tmp_buf, format, args);
+  vsnprintf(tmp_buf, sizeof(tmp_buf), format, args);
   if (tmp_buf[strlen(tmp_buf) - 1] == '\n') {
     tmp_buf[strlen(tmp_buf) - 1] = 0;
   }
@@ -360,4 +360,58 @@ void sanitize_environment(void) {
   }
 
   environ = new_environ;
+}
+
+/****
+ *
+ * check if path is safe (no directory traversal)
+ *
+ ****/
+
+int is_path_safe(const char *path) {
+  char *resolved_path;
+  char current_dir[PATH_MAX];
+  int result = FALSE;
+  
+  if (path == NULL) {
+    return FALSE;
+  }
+  
+  /* Check for directory traversal sequences */
+  if (strstr(path, "../") != NULL || strstr(path, "..\\") != NULL) {
+    display(LOG_WARNING, "Path contains directory traversal sequences: %s", path);
+    return FALSE;
+  }
+  
+  /* Get current working directory */
+  if (getcwd(current_dir, sizeof(current_dir)) == NULL) {
+    display(LOG_ERR, "Unable to get current working directory");
+    return FALSE;
+  }
+  
+  /* Resolve the path */
+  resolved_path = realpath(path, NULL);
+  if (resolved_path == NULL) {
+    /* Path doesn't exist yet, check if the directory component is safe */
+    char *dir_path = strdup(path);
+    char *last_slash = strrchr(dir_path, '/');
+    if (last_slash != NULL) {
+      *last_slash = '\0';
+      resolved_path = realpath(dir_path, NULL);
+      free(dir_path);
+    }
+  }
+  
+  if (resolved_path != NULL) {
+    /* Check if resolved path starts with current directory or /tmp */
+    if (strncmp(resolved_path, current_dir, strlen(current_dir)) == 0 ||
+        strncmp(resolved_path, "/tmp", 4) == 0) {
+      result = TRUE;
+    } else {
+      display(LOG_WARNING, "Path outside allowed directories: %s", resolved_path);
+    }
+    free(resolved_path);
+  }
+  
+  return result;
 }

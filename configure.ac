@@ -61,6 +61,16 @@ AC_ARG_ENABLE(gprof,
       fi
     ],)
 
+HARDENING="no"
+AC_ARG_ENABLE(hardening,
+    [  --enable-hardening      Enable security hardening],
+    [ if test "$GCC" = yes; then
+          HARDENING="yes"
+          CFLAGS="${CFLAGS} -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fPIE -Wformat -Wformat-security"
+          LDFLAGS="${LDFLAGS} -pie -Wl,-z,relro,-z,now"
+      fi
+    ],)
+
 AC_ARG_WITH(zlib,
 	AC_HELP_STRING([--with-zlib],[allow zlib compressed modules (default=yes)]),,with_zlib=yes)
 
@@ -263,5 +273,6 @@ echo ""
 echo "Enable debugging      : ${DEBUG}"
 echo "Enable mem debugging  : ${MEM_DEBUG}"
 echo "Show mem debugging    : ${SHOW_MEM_DEBUG}"
+echo "Enable hardening      : ${HARDENING}"
 echo "-----------------------------------------------"
 echo ""

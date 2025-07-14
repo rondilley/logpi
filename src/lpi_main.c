@@ -110,8 +110,19 @@ int main(int argc, char *argv[]) {
       return (EXIT_SUCCESS);
 
     case 'd':
-      /* show debig info */
-      config->debug = atoi(optarg);
+      /* show debug info */
+      if (optarg && strlen(optarg) > 0) {
+        int debug_level = atoi(optarg);
+        if (debug_level >= 0 && debug_level <= 9) {
+          config->debug = debug_level;
+        } else {
+          display(LOG_ERR, "Debug level must be between 0-9");
+          return (EXIT_FAILURE);
+        }
+      } else {
+        display(LOG_ERR, "Debug level required");
+        return (EXIT_FAILURE);
+      }
       break;
 
     case 'g':
@@ -126,6 +137,14 @@ int main(int argc, char *argv[]) {
 
     case 'w':
       /* save templates to file */
+      if (!optarg || strlen(optarg) == 0) {
+        fprintf(stderr, "ERR - Output filename required\n");
+        return (EXIT_FAILURE);
+      }
+      if (!is_path_safe(optarg)) {
+        fprintf(stderr, "ERR - Unsafe output file path [%s]\n", optarg);
+        return (EXIT_FAILURE);
+      }
       if ((config->outFile_st = fopen(optarg, "w")) EQ NULL) {
         fprintf(stderr, "ERR - Unable to open template file for write [%s]\n",
                 optarg);
@@ -154,7 +173,8 @@ int main(int argc, char *argv[]) {
   /* get processor hostname */
   if (gethostname(config->hostname, MAXHOSTNAMELEN) != 0) {
     display(LOG_ERR, "Unable to get hostname");
-    strcpy(config->hostname, "unknown");
+    strncpy(config->hostname, "unknown", MAXHOSTNAMELEN - 1);
+    config->hostname[MAXHOSTNAMELEN - 1] = '\0';
   }
 
   config->cur_pid = getpid();
@@ -169,6 +189,12 @@ int main(int argc, char *argv[]) {
 
   /* process all the files */
   while (optind < argc) {
+    /* Validate file path for security */
+    if (!is_path_safe(argv[optind])) {
+      display(LOG_ERR, "Unsafe file path rejected: %s", argv[optind]);
+      optind++;
+      continue;
+    }
     processFile(argv[optind++]);
   }
 

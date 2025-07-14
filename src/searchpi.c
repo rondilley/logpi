@@ -101,12 +101,12 @@ int searchFile(const char *fName)
     indexBaseFileName[foundPtr - fName] = '\0';
   }
 
-  sprintf(indexFileName, "%s.lpi", fName);
+  snprintf(indexFileName, sizeof(indexFileName), "%s.lpi", fName);
   if ((loadIndexFile(indexFileName) EQ EXIT_FAILURE) || config->quick)
   {
     if (isGz && !config->quick)
     {
-      sprintf(indexFileName, "%s.lpi", indexBaseFileName);
+      snprintf(indexFileName, sizeof(indexFileName), "%s.lpi", indexBaseFileName);
       if (loadIndexFile(indexFileName) EQ EXIT_FAILURE)
         return (EXIT_FAILURE);
     }

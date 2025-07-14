@@ -55,6 +55,7 @@
 int display(int level, char *format, ...);
 int open_devnull(int fd);
 int is_dir_safe(const char *dir);
+int is_path_safe(const char *path);
 int create_pid_file(const char *filename);
 static int safe_open(const char *filename);
 static void cleanup_pid_file(const char *filename);

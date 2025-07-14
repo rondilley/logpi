@@ -18,3 +18,7 @@ Version 0.6 (December 11, 2018):
 
 * Moved to block reads in searchpi
 
+Version 0.9 (July 14, 2025):
+
+* Minor security enhancements
+* Added compiler hardening option
