@@ -71,7 +71,7 @@ int searchFile(const char *fName)
 {
   FILE *inFile = NULL, *outFile = NULL;
   gzFile gzInFile;
-  char inBuf[8192];
+  char inBuf[65536];  /* Increased buffer size for better I/O performance */
   char indexFileName[PATH_MAX];
   PRIVATE int c = 0, i;
   char *retPtr;
@@ -493,7 +493,7 @@ void bubbleSort(size_t list[], size_t n)
 int loadSearchFile(const char *fName)
 {
   FILE *inFile = NULL;
-  char inBuf[8192];
+  char inBuf[65536];  /* Increased buffer size for better I/O performance */
   int i = 0;
   struct searchTerm_s *searchPtr;
 
@@ -551,7 +551,7 @@ int loadSearchFile(const char *fName)
 int processFile(const char *fName)
 {
   FILE *inFile = NULL, *outFile = NULL;
-  char inBuf[8192];
+  char inBuf[65536];  /* Increased buffer size for better I/O performance */
   char outFileName[PATH_MAX];
   char patternBuf[4096];
   char oBuf[4096];

@@ -30,6 +30,8 @@
  ****/
 
 #define LINEBUF_SIZE 4096
+#define MAX_HASH_SIZE 1000000  /* Maximum hash table size to prevent memory exhaustion */
+#define MAX_HASH_ENTRIES 10000000  /* Maximum total entries to prevent DoS */
 
 /****
  *

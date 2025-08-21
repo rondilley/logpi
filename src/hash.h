@@ -42,6 +42,7 @@
 #include "mem.h"
 #include "util.h"
 #include "../include/common.h"
+#include <stdint.h>
 
 /****
  *
@@ -52,13 +53,21 @@
 struct hashRec_s {
   char *keyString;
   int keyLen;
+  uint32_t hashValue;    /* Cached hash value for faster lookups */
   void *data;
   time_t lastSeen;
   time_t createTime;
   uint32_t accessCount;
   uint16_t modifyCount;
-  struct hashRec_s *prev;
-  struct hashRec_s *next;
+  struct hashRec_s *next;  /* For linked list in buckets (removed prev for better cache locality) */
+};
+
+/* Memory pool for hash records */
+struct hashRecPool_s {
+  struct hashRec_s *records;
+  size_t capacity;
+  size_t used;
+  struct hashRecPool_s *next;
 };
 
 struct hash_s {
@@ -66,7 +75,8 @@ struct hash_s {
   uint32_t totalRecords;
   uint16_t maxDepth;
   uint8_t primeOff;
-  struct hashRec_s **records;
+  struct hashRec_s **buckets;      /* Renamed from records for clarity */
+  struct hashRecPool_s *pools;     /* Memory pools for records */
 };
 
 /****
@@ -76,6 +86,8 @@ struct hash_s {
  ****/
 
 uint32_t calcHash(uint32_t hashSize, const char *keyString);
+uint32_t fnv1aHash(const char *keyString, int keyLen);
+uint32_t calcHashWithLen(const char *keyString, int keyLen);
 void freeHash(struct hash_s *hash);
 int addHashRec(struct hash_s *hash, uint32_t key, char *keyString, void *data,
                time_t lastSeen);

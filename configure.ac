@@ -1,9 +1,10 @@
 dnl Process this file with autoconf to produce a configure script
-m4_include([version.m4])
+m4_include([m4/version.m4])
 AC_PREREQ([2.59])
 AC_INIT([Log Pseudo Indexer], VERSION_NUMBER, [ron.dilley@uberadmin.com], [logpi], [http://www.uberadmin.com/Projects/logpi/])
 AC_CONFIG_SRCDIR(src)
 AC_CONFIG_AUX_DIR(config)
+AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE
 
 dnl Checks for programs
@@ -12,7 +13,7 @@ AC_PROG_CC
 dnl make /usr/local as the default install dir
 AC_PREFIX_DEFAULT(/usr/local)
 
-CFLAGS="${CFLAGS} -I. -I.. -I../include `getconf LFS64_CFLAGS`"
+CFLAGS="${CFLAGS} -O3 -march=native -I. -I.. -I../include `getconf LFS64_CFLAGS`"
 LDFLAGS="${LDFLAGS} `getconf LFS64_LDFLAGS` `getconf LFS64_LIBS`"
 
 SPLINT="no"
@@ -72,7 +73,7 @@ AC_ARG_ENABLE(hardening,
     ],)
 
 AC_ARG_WITH(zlib,
-	AC_HELP_STRING([--with-zlib],[allow zlib compressed modules (default=yes)]),,with_zlib=yes)
+	AS_HELP_STRING([--with-zlib],[allow zlib compressed modules (default=yes)]),,with_zlib=yes)
 
 if test x$with_zlib  = xyes; then
 	AC_CHECK_LIB(z, compress,,with_zlib="no")
@@ -103,7 +104,7 @@ AC_MSG_CHECKING([for special system dependencies])
 
 AC_CANONICAL_HOST
 AC_C_CONST
-AC_PROG_GCC_TRADITIONAL
+dnl AC_PROG_GCC_TRADITIONAL is obsolete and no longer needed
 
 dnl Checks for OS type.
 case "$host" in
@@ -243,7 +244,7 @@ dnl ############## Type checks
 
 AC_STRUCT_TM
 AC_TYPE_PID_T
-AC_TYPE_SIGNAL
+dnl AC_TYPE_SIGNAL is obsolete - removed
 AC_TYPE_SIZE_T
 AC_TYPE_UID_T
 AC_C_INLINE
@@ -252,9 +253,10 @@ AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT8_T
 
-AC_CONFIG_HEADER(include/config.h)
+AC_CONFIG_HEADERS([include/config.h])
 AC_PROG_INSTALL
-AC_OUTPUT(Makefile src/Makefile logpi.1)
+AC_CONFIG_FILES([Makefile src/Makefile logpi.1])
+AC_OUTPUT
 
 BINDIR=`eval echo ${bindir}`; BINDIR=`eval echo ${BINDIR}`;
 MANDIR=`eval echo ${mandir}/${mansubdir}`; MANDIR=`eval echo ${MANDIR}`;

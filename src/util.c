@@ -369,17 +369,38 @@ void sanitize_environment(void) {
  ****/
 
 int is_path_safe(const char *path) {
-  char *resolved_path;
+  char resolved_path[PATH_MAX];
   char current_dir[PATH_MAX];
+  struct stat sb;
   int result = FALSE;
+  size_t path_len;
   
-  if (path == NULL) {
+  if (path == NULL || *path == '\0') {
+    return FALSE;
+  }
+  
+  path_len = strlen(path);
+  if (path_len >= PATH_MAX) {
+    display(LOG_WARNING, "Path too long: %zu bytes", path_len);
+    return FALSE;
+  }
+  
+  /* Check for NULL bytes in path */
+  if (strlen(path) != strnlen(path, path_len + 1)) {
+    display(LOG_WARNING, "Path contains NULL bytes");
     return FALSE;
   }
   
   /* Check for directory traversal sequences */
-  if (strstr(path, "../") != NULL || strstr(path, "..\\") != NULL) {
+  if (strstr(path, "../") != NULL || strstr(path, "..\\") != NULL ||
+      strcmp(path, "..") == 0) {
     display(LOG_WARNING, "Path contains directory traversal sequences: %s", path);
+    return FALSE;
+  }
+  
+  /* Check for dangerous characters */
+  if (strchr(path, '\n') != NULL || strchr(path, '\r') != NULL) {
+    display(LOG_WARNING, "Path contains newline characters");
     return FALSE;
   }
   
@@ -389,28 +410,54 @@ int is_path_safe(const char *path) {
     return FALSE;
   }
   
-  /* Resolve the path */
-  resolved_path = realpath(path, NULL);
-  if (resolved_path == NULL) {
-    /* Path doesn't exist yet, check if the directory component is safe */
-    char *dir_path = strdup(path);
-    char *last_slash = strrchr(dir_path, '/');
-    if (last_slash != NULL) {
-      *last_slash = '\0';
-      resolved_path = realpath(dir_path, NULL);
-      free(dir_path);
+  /* Use lstat to check without following symlinks */
+  if (lstat(path, &sb) == 0) {
+    /* Path exists - check if it's a symlink */
+    if (S_ISLNK(sb.st_mode)) {
+      display(LOG_WARNING, "Path is a symbolic link: %s", path);
+      return FALSE;
     }
   }
   
-  if (resolved_path != NULL) {
-    /* Check if resolved path starts with current directory or /tmp */
+  /* Resolve the path without following symlinks for final component */
+  if (realpath(path, resolved_path) != NULL) {
+    /* Additional check: ensure resolved path doesn't contain .. */
+    if (strstr(resolved_path, "/../") != NULL) {
+      display(LOG_WARNING, "Resolved path contains traversal: %s", resolved_path);
+      return FALSE;
+    }
+    
+    /* Check if resolved path is within allowed directories */
     if (strncmp(resolved_path, current_dir, strlen(current_dir)) == 0 ||
-        strncmp(resolved_path, "/tmp", 4) == 0) {
+        strncmp(resolved_path, "/tmp/", 5) == 0 ||
+        strncmp(resolved_path, "/var/log/", 9) == 0) {
       result = TRUE;
     } else {
       display(LOG_WARNING, "Path outside allowed directories: %s", resolved_path);
     }
-    free(resolved_path);
+  } else if (errno == ENOENT) {
+    /* File doesn't exist yet - validate parent directory */
+    char dir_path[PATH_MAX];
+    char *last_slash;
+    
+    strncpy(dir_path, path, sizeof(dir_path) - 1);
+    dir_path[sizeof(dir_path) - 1] = '\0';
+    
+    last_slash = strrchr(dir_path, '/');
+    if (last_slash != NULL && last_slash != dir_path) {
+      *last_slash = '\0';
+      
+      /* Check parent directory without following symlinks */
+      if (lstat(dir_path, &sb) == 0 && !S_ISLNK(sb.st_mode)) {
+        if (realpath(dir_path, resolved_path) != NULL) {
+          if (strncmp(resolved_path, current_dir, strlen(current_dir)) == 0 ||
+              strncmp(resolved_path, "/tmp", 4) == 0 ||
+              strncmp(resolved_path, "/var/log", 8) == 0) {
+            result = TRUE;
+          }
+        }
+      }
+    }
   }
   
   return result;

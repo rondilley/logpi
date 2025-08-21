@@ -64,10 +64,23 @@ extern Config_t *config;
 
 void initParser(void)
 {
+  int i;
+  
   /* make sure the field list of clean */
   XMEMSET(fields, 0, sizeof(char *) * MAX_FIELD_POS);
 
-  /* XXX it would be faster to init all mem here instead of on-demand */
+  /* Pre-allocate all field memory for better performance */
+  for (i = 0; i < MAX_FIELD_POS; i++) {
+    fields[i] = (char *)XMALLOC(MAX_FIELD_LEN);
+    if (fields[i] == NULL) {
+      fprintf(stderr, "ERR - Unable to allocate parser field memory\n");
+      /* Clean up already allocated fields */
+      while (--i >= 0) {
+        XFREE(fields[i]);
+      }
+      return;
+    }
+  }
 }
 
 /****
@@ -115,43 +128,58 @@ int parseLine(char *line)
   int tmpNum = 0;
   int inQuotes = FALSE;
   char fieldTypeChar;
-  char curChar = line[0];
+  char curChar;
+  size_t lineLen;
+  
+  /* Validate input */
+  if (line == NULL) {
+    fprintf(stderr, "ERR - NULL line passed to parseLine\n");
+    return 0;
+  }
+  
+  /* Check line length to prevent buffer overruns */
+  lineLen = strnlen(line, 8192);
+  if (lineLen >= 8192) {
+    fprintf(stderr, "ERR - Line too long for parsing\n");
+    return 0;
+  }
+  
+  curChar = line[0];
 
+  /* Field memory is now pre-allocated in initParser() */
   if (fields[fieldPos] EQ NULL)
   {
-    if ((fields[fieldPos] = (char *)XMALLOC(MAX_FIELD_LEN)) EQ NULL)
-    {
-      display(LOG_ERR, "Unable to allocate memory for string");
-      return (0);
-    }
+    fprintf(stderr, "ERR - Parser not properly initialized\n");
+    return (0);
   }
   fieldPos++;
 
   while (curChar != '\0')
   {
-
-    if (runLen >= MAX_FIELD_LEN)
+    /* Check bounds BEFORE any operations to prevent overflow */
+    if (fieldPos >= MAX_FIELD_POS)
     {
-
-      fprintf(stderr, "ERR - Field is too long\n");
+      fprintf(stderr, "ERR - Too many fields in line\n");
       return (fieldPos - 1);
     }
-    else if (fieldPos >= MAX_FIELD_POS)
+    
+    if (runLen >= MAX_FIELD_LEN)
     {
-
-      fprintf(stderr, "ERR - Too many fields in line\n");
+      fprintf(stderr, "ERR - Field is too long\n");
       return (fieldPos - 1);
     }
     else if (curFieldType EQ FIELD_TYPE_EXTRACT)
     {
 
+      /* Field memory is pre-allocated, just verify it exists */
       if (fields[fieldPos] EQ NULL)
       {
-        if ((fields[fieldPos] = (char *)XMALLOC(MAX_FIELD_LEN)) EQ NULL)
-        {
-          fprintf(stderr, "ERR - Unable to allocate memory for string\n");
-          return (fieldPos - 1);
-        }
+        fprintf(stderr, "ERR - Parser field not initialized\n");
+        return (fieldPos - 1);
+      }
+      /* Ensure we don't overflow the field buffer */
+      if (runLen >= MAX_FIELD_LEN - 1) {
+        runLen = MAX_FIELD_LEN - 2;
       }
       fields[fieldPos][runLen + 1] = '\0';
       fields[fieldPos][0] = fieldTypeChar;
@@ -197,6 +225,14 @@ int parseLine(char *line)
         fprintf(stderr, "ERR - Template is too long\n");
         return (fieldPos - 1);
       }
+      
+      /* Bounds check before incrementing fieldPos */
+      if (fieldPos + 1 >= MAX_FIELD_POS)
+      {
+        fprintf(stderr, "ERR - Would exceed maximum field count\n");
+        return (fieldPos);
+      }
+      
       fields[0][templatePos++] = '%';
       fields[0][templatePos++] = fieldTypeChar;
       fields[0][templatePos] = '\0';
@@ -222,7 +258,12 @@ int parseLine(char *line)
          * add alpha numberic char to string
          *
          ****/
-
+        /* Check for overflow before incrementing */
+        if (runLen >= MAX_FIELD_LEN - 1)
+        {
+          fprintf(stderr, "ERR - Field would exceed maximum length\n");
+          return (fieldPos - 1);
+        }
         runLen++;
         curLinePos++;
       }
@@ -284,6 +325,10 @@ int parseLine(char *line)
               return (fieldPos - 1);
             }
           }
+          /* Ensure we don't overflow the field buffer */
+          if (runLen >= MAX_FIELD_LEN - 1) {
+            runLen = MAX_FIELD_LEN - 2;
+          }
           fields[fieldPos][runLen + 1] = '\0';
           fields[fieldPos][0] = 's';
           XMEMCPY(fields[fieldPos] + 1, line + startOfField, runLen);
@@ -299,6 +344,14 @@ int parseLine(char *line)
             fprintf(stderr, "ERR - Template is too long\n");
             return (fieldPos - 1);
           }
+          
+          /* Bounds check before incrementing fieldPos */
+          if (fieldPos + 1 >= MAX_FIELD_POS)
+          {
+            fprintf(stderr, "ERR - Would exceed maximum field count\n");
+            return (fieldPos);
+          }
+          
           fields[0][templatePos++] = '%';
           fields[0][templatePos++] = 's';
           fields[0][templatePos++] = curChar;
@@ -445,8 +498,13 @@ int parseLine(char *line)
       else if ((octet < 3) && (curChar EQ '.'))
       {
 
+        /* Use strtol for safe parsing with error checking */
+        char *endptr;
+        long octet_val = strtol(line + startOfOctet, &endptr, 10);
+        
         if ((octetLen > 0) && (octetLen <= 3) &&
-            (atoi(line + startOfOctet) < 256))
+            (endptr != line + startOfOctet) &&
+            (octet_val >= 0) && (octet_val < 256))
         { /* is the octet valid */
 
           /* convert field to IPv4 */
@@ -466,8 +524,13 @@ int parseLine(char *line)
       else if (octet EQ 3)
       {
 
+        /* Use strtol for safe parsing with error checking */
+        char *endptr;
+        long octet_val = strtol(line + startOfOctet, &endptr, 10);
+        
         if ((octetLen > 0) && (octetLen <= 3) &&
-            (atoi(line + startOfOctet) < 256))
+            (endptr != line + startOfOctet) &&
+            (octet_val >= 0) && (octet_val < 256))
         { /* is the octet valid */
 
           /* extract field */
@@ -639,9 +702,13 @@ int parseLine(char *line)
       else if (curChar EQ '.')
       {
 
-        if ((runLen <= 3) &
-            (atoi(line + startOfField) <
-             256))
+        /* Use strtol for safe parsing with error checking */
+        char *endptr2;
+        long field_val = strtol(line + startOfField, &endptr2, 10);
+        
+        if ((runLen <= 3) &&
+            (endptr2 != line + startOfField) &&
+            (field_val >= 0) && (field_val < 256))
         { /* check to see if this is the start of an IP address */
 
           /* convert field to IPv4 */
@@ -982,12 +1049,21 @@ int parseLine(char *line)
 
 int getParsedField(char *oBuf, int oBufLen, const unsigned int fieldNum)
 {
+  if (oBuf == NULL || oBufLen <= 0)
+  {
+    fprintf(stderr, "ERR - Invalid output buffer\n");
+    return (FAILED);
+  }
+  
   if ((fieldNum >= MAX_FIELD_POS) || (fields[fieldNum] EQ NULL))
   {
     fprintf(stderr, "ERR - Requested field does not exist [%d]\n", fieldNum);
     oBuf[0] = 0;
     return (FAILED);
   }
+  
+  /* Ensure null termination */
   XSTRNCPY(oBuf, fields[fieldNum], oBufLen);
+  oBuf[oBufLen - 1] = '\0';
   return (TRUE);
 }

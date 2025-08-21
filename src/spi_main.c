@@ -129,9 +129,17 @@ int main(int argc, char *argv[])
     case 'd':
       /* show debug info */
       if (optarg && strlen(optarg) > 0) {
-        int debug_level = atoi(optarg);
+        char *endptr;
+        long debug_level = strtol(optarg, &endptr, 10);
+        
+        /* Check for valid conversion and range */
+        if (*endptr != '\0' || endptr == optarg) {
+          display(LOG_ERR, "Invalid debug level format");
+          return (EXIT_FAILURE);
+        }
+        
         if (debug_level >= 0 && debug_level <= 9) {
-          config->debug = debug_level;
+          config->debug = (int)debug_level;
         } else {
           display(LOG_ERR, "Debug level must be between 0-9");
           return (EXIT_FAILURE);

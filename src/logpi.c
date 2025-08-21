@@ -119,7 +119,7 @@ int printAddress(const struct hashRec_s *hashRec) {
 int processFile(const char *fName) {
   FILE *inFile = NULL, *outFile = NULL;
   gzFile gzInFile;
-  char inBuf[8192];
+  char inBuf[65536];  /* Increased buffer size for better I/O performance */
   char outFileName[PATH_MAX];
   char patternBuf[4096];
   char oBuf[4096];
@@ -245,9 +245,17 @@ int processFile(const char *fName) {
             /* add to the hash */
             addUniqueHashRec(addrHash, oBuf, strlen(oBuf) + 1, tmpMd);
 
-            /* rebalance the hash if it gets too full */
-            if (((float)addrHash->totalRecords / (float)addrHash->size) > 0.8)
-              addrHash = dyGrowHash(addrHash);
+            /* rebalance the hash if it gets too full, with limits */
+            if (((float)addrHash->totalRecords / (float)addrHash->size) > 0.8) {
+              if (addrHash->size >= MAX_HASH_SIZE) {
+                fprintf(stderr, "WARNING - Hash table at maximum size (%d), performance may degrade\n", MAX_HASH_SIZE);
+              } else if (addrHash->totalRecords >= MAX_HASH_ENTRIES) {
+                fprintf(stderr, "ERR - Maximum number of hash entries reached (%d), aborting\n", MAX_HASH_ENTRIES);
+                abort();
+              } else {
+                addrHash = dyGrowHash(addrHash);
+              }
+            }
           } else {
             /* update the address counts */
             if (tmpRec->data != NULL) {
