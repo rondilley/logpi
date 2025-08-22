@@ -67,9 +67,16 @@ extern int reload;
  *
  ****/
 
+/* Global mega-buffer for batched output */
+static char mega_buffer[1048576];  /* 1MB buffer */
+static int mega_buffer_pos = 0;
+
 int printAddress(const struct hashRec_s *hashRec) {
   metaData_t *tmpMd;
   struct Address_s *tmpAddr;
+  char local_buffer[4096];
+  int local_pos = 0;
+  FILE *output_stream;
 
   if (hashRec->data != NULL) {
     tmpMd = (metaData_t *)hashRec->data;
@@ -79,35 +86,56 @@ int printAddress(const struct hashRec_s *hashRec) {
       printf("DEBUG - Searching for [%s]\n", hashRec->keyString);
 #endif
 
-    /* save addr if -w was used */
-    if (config->outFile_st != NULL)
-      fprintf(config->outFile_st, "%s,%lu", hashRec->keyString + 1,
-              tmpMd->count);
-    else
-      printf("%s,%lu", hashRec->keyString + 1, tmpMd->count);
+    /* Build output line in local buffer first */
+    local_pos = snprintf(local_buffer, sizeof(local_buffer), "%s,%lu", 
+                        hashRec->keyString + 1, tmpMd->count);
 
-    /* free the list of pseudo indexes */
+    /* Add all address:offset pairs to buffer */
+    tmpAddr = tmpMd->head;
+    while (tmpAddr != NULL && local_pos < sizeof(local_buffer) - 32) {
+      local_pos += snprintf(local_buffer + local_pos, 
+                          sizeof(local_buffer) - local_pos,
+                          ",%lu:%lu", tmpAddr->line + 1, tmpAddr->offset);
+      tmpAddr = tmpAddr->next;
+    }
+    
+    /* Add newline */
+    if (local_pos < sizeof(local_buffer) - 1) {
+      local_buffer[local_pos++] = '\n';
+    }
+
+    /* Add to mega buffer */
+    if (mega_buffer_pos + local_pos >= sizeof(mega_buffer)) {
+      /* Flush mega buffer when full */
+      output_stream = config->outFile_st ? config->outFile_st : stdout;
+      fwrite(mega_buffer, 1, mega_buffer_pos, output_stream);
+      mega_buffer_pos = 0;
+    }
+    
+    /* Copy to mega buffer */
+    memcpy(mega_buffer + mega_buffer_pos, local_buffer, local_pos);
+    mega_buffer_pos += local_pos;
+
+    /* Free the list of pseudo indexes */
     while ((tmpAddr = tmpMd->head) != NULL) {
-      /* save addr if -w was used */
-      if (config->outFile_st != NULL)
-        fprintf(config->outFile_st, ",%lu:%lu", tmpAddr->line + 1,
-                tmpAddr->offset);
-      else
-        printf(",%lu:%lu", tmpAddr->line + 1, tmpAddr->offset);
-
       tmpMd->head = tmpAddr->next;
       XFREE(tmpAddr);
     }
-    if (config->outFile_st != NULL)
-      fprintf(config->outFile_st, "\n");
-    else
-      printf("\n");
   }
 
   /* can use this later to interrupt traversing the hash */
   if (quit)
     return (TRUE);
   return (FALSE);
+}
+
+/* Flush any remaining buffered output */
+void flushOutputBuffer(void) {
+  if (mega_buffer_pos > 0) {
+    FILE *output_stream = config->outFile_st ? config->outFile_st : stdout;
+    fwrite(mega_buffer, 1, mega_buffer_pos, output_stream);
+    mega_buffer_pos = 0;
+  }
 }
 
 /****
@@ -134,6 +162,30 @@ int processFile(const char *fName) {
   struct Address_s *tmpAddr;
   struct Fields_s **curFieldPtr;
   int isGz = FALSE;
+
+  /* Handle automatic .lpi file naming */
+  if (config->auto_lpi_naming) {
+    /* Generate output filename: input.ext -> input.ext.lpi */
+    if (snprintf(outFileName, sizeof(outFileName), "%s.lpi", fName) >= sizeof(outFileName)) {
+      fprintf(stderr, "ERR - Output filename too long for [%s]\n", fName);
+      return (EXIT_FAILURE);
+    }
+    
+    /* Validate the generated path for security */
+    if (!is_path_safe(outFileName)) {
+      fprintf(stderr, "ERR - Unsafe output file path [%s]\n", outFileName);
+      return (EXIT_FAILURE);
+    }
+    
+    /* Open the output file for this specific input file */
+    if ((config->outFile_st = fopen(outFileName, "w")) == NULL) {
+      fprintf(stderr, "ERR - Unable to open output file [%s]: %s\n", 
+              outFileName, strerror(errno));
+      return (EXIT_FAILURE);
+    }
+    
+    fprintf(stderr, "Writing index to [%s]\n", outFileName);
+  }
 
   /* initialize the hash if we need to */
   if (addrHash EQ NULL)
@@ -297,6 +349,19 @@ int processFile(const char *fName) {
 
   deInitParser();
 
+  /* For auto-naming, write addresses to file and close it */
+  if (config->auto_lpi_naming && config->outFile_st) {
+    /* Write addresses to this file */
+    if (addrHash != NULL) {
+      traverseHash(addrHash, printAddress);
+      flushOutputBuffer();
+      freeHash(addrHash);
+      addrHash = NULL; /* Reset for next file */
+    }
+    fclose(config->outFile_st);
+    config->outFile_st = NULL;
+  }
+
   return (EXIT_SUCCESS);
 }
 
@@ -315,9 +380,11 @@ int showAddresses(void) {
   if (addrHash != NULL) {
     /* dump the template data */
     if (traverseHash(addrHash, printAddress) EQ TRUE) {
+      flushOutputBuffer();
       freeHash(addrHash);
       return (EXIT_SUCCESS);
     }
+    flushOutputBuffer();
     freeHash(addrHash);
   }
 

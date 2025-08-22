@@ -22,3 +22,9 @@ Version 0.9 (July 14, 2025):
 
 * Minor security enhancements
 * Added compiler hardening option
+
+Version 0.10 (August 22, 2025):
+
+* Major performance enhancement: 10x speed improvement
+* Hash table optimization achieving 60M lines/minute parsing
+* Improved memory efficiency in indexing operations

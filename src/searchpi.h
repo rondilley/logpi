@@ -87,7 +87,9 @@ typedef struct {
 int printAddress(const struct hashRec_s *hashRec);
 int processFile(const char *fName);
 int searchFile(const char *fName);
+int searchFile_stream(const char *fName);  /* Streaming version for large files */
 int loadIndexFile(const char *fName);
+int loadIndexFile_stream(const char *fName);  /* Streaming version for large index files */
 int loadSearchFile(const char *fName);
 void quickSort(size_t *number, size_t first, size_t last);
 void bubbleSort(size_t list[], size_t n);

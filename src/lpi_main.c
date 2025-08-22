@@ -93,10 +93,10 @@ int main(int argc, char *argv[]) {
     static struct option long_options[] = {
         {"greedy", no_argument, 0, 'g'},      {"version", no_argument, 0, 'v'},
         {"debug", required_argument, 0, 'd'}, {"help", no_argument, 0, 'h'},
-        {"write", required_argument, 0, 'w'}, {0, no_argument, 0, 0}};
-    c = getopt_long(argc, argv, "vd:hw:g", long_options, &option_index);
+        {"write", no_argument, 0, 'w'}, {0, no_argument, 0, 0}};
+    c = getopt_long(argc, argv, "vd:hwg", long_options, &option_index);
 #else
-    c = getopt(argc, argv, "vd:hw:g");
+    c = getopt(argc, argv, "vd:hwg");
 #endif
 
     if (c EQ - 1)
@@ -144,20 +144,8 @@ int main(int argc, char *argv[]) {
       return (EXIT_SUCCESS);
 
     case 'w':
-      /* save templates to file */
-      if (!optarg || strlen(optarg) == 0) {
-        fprintf(stderr, "ERR - Output filename required\n");
-        return (EXIT_FAILURE);
-      }
-      if (!is_path_safe(optarg)) {
-        fprintf(stderr, "ERR - Unsafe output file path [%s]\n", optarg);
-        return (EXIT_FAILURE);
-      }
-      if ((config->outFile_st = fopen(optarg, "w")) EQ NULL) {
-        fprintf(stderr, "ERR - Unable to open template file for write [%s]\n",
-                optarg);
-        return (EXIT_FAILURE);
-      }
+      /* enable automatic .lpi file naming */
+      config->auto_lpi_naming = TRUE;
       break;
 
     default:
@@ -195,6 +183,17 @@ int main(int argc, char *argv[]) {
    * get to work
    */
 
+  /* Check for stdin + -w combination error */
+  if (config->auto_lpi_naming) {
+    for (int i = optind; i < argc; i++) {
+      if (strcmp(argv[i], "-") == 0) {
+        fprintf(stderr, "ERR - Cannot use -w switch when reading from stdin\n");
+        cleanup();
+        return (EXIT_FAILURE);
+      }
+    }
+  }
+
   /* process all the files */
   while (optind < argc) {
     /* Validate file path for security */
@@ -206,8 +205,10 @@ int main(int argc, char *argv[]) {
     processFile(argv[optind++]);
   }
 
-  /* show addresses */
-  showAddresses();
+  /* show addresses (only if not using auto-naming) */
+  if (!config->auto_lpi_naming) {
+    showAddresses();
+  }
 
   /*
    * finished with the work
@@ -262,7 +263,7 @@ PRIVATE void print_help(void) {
   fprintf(stderr, " -g|--greedy            ignore quotes\n");
   fprintf(stderr, " -h|--help              this info\n");
   fprintf(stderr, " -v|--version           display version information\n");
-  fprintf(stderr, " -w|--write {file}      save metadata to file\n");
+  fprintf(stderr, " -w|--write             auto-generate .lpi files for each input file\n");
   fprintf(stderr, " filename               one or more files to process, use "
                   "'-' to read from stdin\n");
 #else
@@ -270,7 +271,7 @@ PRIVATE void print_help(void) {
   fprintf(stderr, " -g            ignore quotes\n");
   fprintf(stderr, " -h            this info\n");
   fprintf(stderr, " -v            display version information\n");
-  fprintf(stderr, " -w {file}     save metadata to file\n");
+  fprintf(stderr, " -w            auto-generate .lpi files for each input file\n");
   fprintf(stderr, " filename      one or more files to process, use '-' to "
                   "read from stdin\n");
 #endif

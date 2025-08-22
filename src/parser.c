@@ -33,6 +33,10 @@
  ****/
 
 #include "parser.h"
+#include "netaddr_parser.h"
+
+/* Enable network address optimized parser */
+#define USE_NETADDR_PARSER 1
 
 /****
  *
@@ -41,6 +45,9 @@
  ****/
 
 PRIVATE char *fields[MAX_FIELD_POS];
+#ifdef USE_NETADDR_PARSER
+PRIVATE parse_result_t parse_result;
+#endif
 
 /****
  *
@@ -81,6 +88,11 @@ void initParser(void)
       return;
     }
   }
+
+#ifdef USE_NETADDR_PARSER
+  /* Initialize network address parser */
+  init_netaddr_parser();
+#endif
 }
 
 /****
@@ -109,6 +121,74 @@ void deInitParser(void)
 
 int parseLine(char *line)
 {
+#ifdef USE_NETADDR_PARSER
+  /* Use specialized network address parser for maximum performance */
+  size_t line_len;
+  int i;
+  
+  /* Validate input */
+  if (line == NULL) {
+    fprintf(stderr, "ERR - NULL line passed to parseLine\n");
+    return 0;
+  }
+  
+  line_len = strnlen(line, 8192);
+  if (line_len >= 8192) {
+    fprintf(stderr, "ERR - Line too long for parsing\n");
+    return 0;
+  }
+  
+  /* Parse all network addresses in the line */
+  int addr_count = parse_network_addresses(line, line_len, &parse_result);
+  
+  /* Convert results to field format for compatibility */
+  /* Field 0 is the template */
+  fields[0][0] = '\0';
+  int template_pos = 0;
+  
+  /* Add each found address as a field */
+  for (i = 0; i < addr_count && i < MAX_FIELD_POS - 1; i++) {
+    net_addr_t *addr = &parse_result.addresses[i];
+    char type_char;
+    
+    switch (addr->type) {
+      case ADDR_TYPE_IPV4:
+        type_char = 'i';
+        break;
+      case ADDR_TYPE_IPV6:
+        type_char = 'I';
+        break;
+      case ADDR_TYPE_MAC:
+        type_char = 'm';
+        break;
+      default:
+        continue;
+    }
+    
+    /* Store in field format */
+    fields[i + 1][0] = type_char;
+    strcpy(fields[i + 1] + 1, addr->str);
+    
+    /* Update template */
+    if (template_pos < MAX_FIELD_LEN - 3) {
+      fields[0][template_pos++] = '%';
+      fields[0][template_pos++] = type_char;
+      fields[0][template_pos] = '\0';
+    }
+  }
+  
+#ifdef DEBUG
+  if (config->debug >= 3) {
+    printf("DEBUG - Found %d network addresses (IPv4:%u, IPv6:%u, MAC:%u)\n",
+           addr_count, parse_result.ipv4_count, parse_result.ipv6_count, 
+           parse_result.mac_count);
+  }
+#endif
+  
+  return addr_count + 1;  /* +1 for template field */
+  
+#else
+  /* Original parser implementation */
   int curFormPos = 0;
   int curLinePos = 0;
   int startOfField, startOfOctet;
@@ -1039,6 +1119,7 @@ int parseLine(char *line)
     return (0);
 
   return (fieldPos);
+#endif /* USE_NETADDR_PARSER */
 }
 
 /****

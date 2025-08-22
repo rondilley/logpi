@@ -27,6 +27,7 @@
  ****/
 
 #include "searchpi.h"
+#include <sys/stat.h>
 
 /****
  *
@@ -158,11 +159,20 @@ int searchFile(const char *fName)
 
     if (curMatchLine EQ config->match_offsets[offMatchPos])
     {
+      /* Print all matches for this line with optional field offset information */
+      size_t temp_pos = offMatchPos;
+      while (temp_pos < config->match_count && config->match_offsets[temp_pos] EQ curMatchLine) {
 #ifdef DEBUG
-      fprintf(outFile, "[%zu] %s", curMatchLine, inBuf);
+        if (config->debug >= 1)
+          fprintf(outFile, "[%zu:field_%zu] %s", curMatchLine, config->field_offsets[temp_pos], inBuf);
+        else
+          fprintf(outFile, "%s", inBuf);
 #else
-      fprintf( outFile, "%s", inBuf);
+        fprintf(outFile, "%s", inBuf);
 #endif
+        temp_pos++;
+      }
+      
       while ( config->match_offsets[offMatchPos] EQ curMatchLine )
         offMatchPos++;
          
@@ -185,6 +195,8 @@ int searchFile(const char *fName)
   /* cleanup global variables so we can process more files */
   XFREE( config->match_offsets );
   config->match_offsets = NULL;
+  XFREE( config->field_offsets );
+  config->field_offsets = NULL;
   config->match_count = 0;
 
   return (EXIT_SUCCESS);
@@ -198,6 +210,14 @@ int searchFile(const char *fName)
 
 int loadIndexFile(const char *fName)
 {
+  /* Check if file is too large for regular processing, use streaming instead */
+  struct stat file_stat;
+  if (stat(fName, &file_stat) == 0 && file_stat.st_size > 10 * 1024 * 1024) {
+    fprintf(stderr, "Large index file detected (%ld MB), using streaming mode\n", 
+            file_stat.st_size / (1024 * 1024));
+    return loadIndexFile_stream(fName);
+  }
+
   FILE *inFile = NULL;
   char inBuf[65536], *tok, *sol, *endPtr, *eol, *lineBuf = NULL;
   int i, done = FALSE, match = 0;
@@ -263,7 +283,15 @@ int loadIndexFile(const char *fName)
 #endif
 
       /* copy bytes (sol to eol) to lineBuf */
-      lineBufSize += (eol - sol);
+      size_t chunk_size = (eol - sol);
+      lineBufSize = linePos + chunk_size;
+      
+      /* Protect against massive index lines */
+      if (lineBufSize > 256 * 1024 * 1024) {  /* 256MB limit */
+        fprintf(stderr, "ERR - Index line too large [%lu bytes], possibly corrupt\n", lineBufSize);
+        exit(EXIT_FAILURE);
+      }
+      
 #ifdef DEBUG
       if (config->debug >= 6)
         fprintf(stderr, "DEBUG - Line Buf: [%lu]\n", lineBufSize);
@@ -276,7 +304,7 @@ int loadIndexFile(const char *fName)
                 lineBufSize);
         exit(EXIT_FAILURE);
       }
-      XMEMCPY(lineBuf + linePos, sol, eol - sol);
+      XMEMCPY(lineBuf + linePos, sol, chunk_size);
       lineBuf[lineBufSize] = '\0';
 
 #ifdef DEBUG
@@ -310,12 +338,27 @@ int loadIndexFile(const char *fName)
             config->match_offsets =
                 XREALLOC(config->match_offsets,
                          (config->match_count + count + 1) * sizeof(size_t));
+            config->field_offsets =
+                XREALLOC(config->field_offsets,
+                         (config->match_count + count + 1) * sizeof(size_t));
             fprintf(stderr, "MATCH [%s] with %zu lines\n", lineBuf, count);
             for (a = config->match_count; a < (config->match_count + count);
                  a++)
             {
               if ((tok = strtok(NULL, ",")) != NULL)
-                config->match_offsets[a] = strtoll(tok, &endPtr, 10);
+              {
+                /* Parse line:offset format */
+                char *colon = strchr(tok, ':');
+                if (colon != NULL) {
+                  *colon = '\0';  /* Split at colon */
+                  config->match_offsets[a] = strtoll(tok, &endPtr, 10);
+                  config->field_offsets[a] = strtoll(colon + 1, &endPtr, 10);
+                } else {
+                  /* Fallback for old format without field offsets */
+                  config->match_offsets[a] = strtoll(tok, &endPtr, 10);
+                  config->field_offsets[a] = 0;
+                }
+              }
               else
               {
                 fprintf(stderr, "ERR - Index is corrupt [%s]\n", lineBuf);
@@ -397,7 +440,14 @@ int loadIndexFile(const char *fName)
         fprintf(stderr, "Overflow [%lu] bytes saved\n", rLeft);
 #endif
       /* copy remainder from sol to end of inBuf to lineBuf */
-      lineBufSize += rLeft;
+      lineBufSize = linePos + rLeft;  /* Fix: Set to actual size, don't increment */
+      
+      /* Protect against massive index lines */
+      if (lineBufSize > 256 * 1024 * 1024) {  /* 256MB limit */
+        fprintf(stderr, "ERR - Index line too large [%lu bytes], possibly corrupt\n", lineBufSize);
+        exit(EXIT_FAILURE);
+      }
+      
       if ((lineBuf = XREALLOC(lineBuf, lineBufSize + 1)) EQ NULL)
       {
         fprintf(stderr,
@@ -408,6 +458,11 @@ int loadIndexFile(const char *fName)
       XMEMCPY(lineBuf + linePos, sol, rLeft);
       linePos += rLeft;
       lineBuf[lineBufSize] = '\0';
+      
+#ifdef DEBUG
+      if (config->debug >= 3)
+        fprintf(stderr, "DEBUG - linePos now: %lu, lineBufSize: %lu\n", linePos, lineBufSize);
+#endif
     }
   }
 
@@ -664,4 +719,216 @@ int processFile(const char *fName)
   deInitParser();
 
   return (EXIT_SUCCESS);
+}
+
+/****
+ *
+ * streaming version of loadIndexFile for large index files
+ *
+ ****/
+
+int loadIndexFile_stream(const char *fName)
+{
+  FILE *inFile = NULL;
+  char line_buffer[1024];
+  char *tok, *endPtr;
+  int match = 0;
+  size_t a, count;
+  struct searchTerm_s *searchHead = NULL, *searchTail = NULL, *searchPtr, *tmpPtr;
+
+  /* make a copy of the term linked list */
+  searchPtr = config->searchHead;
+  while( searchPtr != NULL ) {
+    /* create new search term record */
+    if ((tmpPtr = XMALLOC(sizeof(struct searchTerm_s))) EQ NULL)
+    {
+      fprintf(stderr, "ERR - Unable to allocate memory for search term\n");
+      exit(EXIT_FAILURE);
+    }
+    XMEMSET(tmpPtr, '\0', sizeof(struct searchTerm_s));
+    tmpPtr->len = searchPtr->len;
+    tmpPtr->term = XMALLOC(searchPtr->len + 1);
+    XSTRCPY(tmpPtr->term, searchPtr->term );
+
+    /* store search term in the linked list */
+    tmpPtr->next = searchHead;
+    if ( searchHead != NULL )
+      searchHead->prev = tmpPtr;
+    searchHead = tmpPtr;
+
+    /* advance to next source record */
+    searchPtr = searchPtr->next;
+  }
+
+#ifdef DEBUG
+  if (config->debug >= 1)
+    fprintf(stderr, "Opening [%s] for streaming read\n", fName);
+#endif
+
+#ifdef HAVE_FOPEN64
+  if ((inFile = fopen64(fName, "r")) EQ NULL)
+  {
+#else
+  if ((inFile = fopen(fName, "r")) EQ NULL)
+  {
+#endif
+    fprintf(stderr, "ERR - Unable to open file [%s] %d (%s)\n", fName, errno,
+            strerror(errno));
+    return (EXIT_FAILURE);
+  }
+
+  /* Process file line by line to avoid memory issues */
+  while (fgets(line_buffer, sizeof(line_buffer), inFile) != NULL && searchHead != NULL) {
+    
+    /* Remove newline if present */
+    size_t len = strlen(line_buffer);
+    if (len > 0 && line_buffer[len-1] == '\n') {
+      line_buffer[len-1] = '\0';
+      len--;
+    }
+    
+    /* Skip empty lines */
+    if (len == 0) continue;
+
+#ifdef DEBUG
+    if (config->debug >= 5)
+      fprintf(stderr, "DEBUG - Processing line: %s\n", line_buffer);
+#endif
+
+    /* Extract address (first token before comma) */
+    if ( ( tok = strtok(line_buffer, ",") ) EQ NULL ) {
+      fprintf( stderr, "ERR - Index may be corrupt\n" );
+      continue;  /* Skip malformed lines instead of exiting */
+    }
+    
+#ifdef DEBUG
+    if (config->debug >= 2)
+      fprintf(stderr, "TOK: %s\n", tok);
+#endif
+
+    /* search until term is found */
+    searchPtr = searchHead;
+    while (searchPtr != NULL)
+    {
+      count = 0;
+      if (searchPtr->len EQ strlen(tok))
+      {
+        if (XMEMCMP(searchPtr->term, tok, searchPtr->len) EQ 0)
+        {
+          count = strtoll(strtok(NULL, ","), &endPtr, 10);
+
+          config->match_offsets =
+              XREALLOC(config->match_offsets,
+                       (config->match_count + count + 1) * sizeof(size_t));
+          config->field_offsets =
+              XREALLOC(config->field_offsets,
+                       (config->match_count + count + 1) * sizeof(size_t));
+          fprintf(stderr, "MATCH [%s] with %zu lines\n", tok, count);
+          for (a = config->match_count; a < (config->match_count + count); a++)
+          {
+            if ((tok = strtok(NULL, ",")) != NULL)
+            {
+              /* Parse line:offset format */
+              char *colon = strchr(tok, ':');
+              if (colon != NULL) {
+                *colon = '\0';  /* Split at colon */
+                config->match_offsets[a] = strtoll(tok, &endPtr, 10);
+                config->field_offsets[a] = strtoll(colon + 1, &endPtr, 10);
+              } else {
+                /* Fallback for old format without field offsets */
+                config->match_offsets[a] = strtoll(tok, &endPtr, 10);
+                config->field_offsets[a] = 0;
+              }
+            }
+            else
+            {
+              fprintf(stderr, "ERR - Index is corrupt [line truncated]\n");
+              break;  /* Break instead of exit */
+            }
+          }
+          config->match_count += count;
+          match++;
+        }
+      }
+
+      /* if we got a hit */
+      if (count)
+      {
+#ifdef DEBUG
+        if (config->debug >= 3)
+          fprintf(stderr, "DEBUG - Removing matched term\n");
+#endif
+        /* matched the term, remove it from the list */
+        if ((searchPtr->prev EQ NULL) && (searchPtr->next EQ NULL))
+        {
+          /* just one record left in the list */
+#ifdef DEBUG
+          if (config->debug >= 2)
+            fprintf(stderr, "DEBUG - Removing last search term\n");
+#endif
+          searchHead = searchTail = NULL;
+          XFREE(searchPtr->term);
+          XFREE(searchPtr);
+          searchPtr = NULL;
+        }
+        else if (searchPtr->next EQ NULL)
+        {
+          /* end of list */
+          searchPtr->prev->next = NULL;
+          searchTail = searchPtr->prev;
+          XFREE(searchPtr->term);
+          XFREE(searchPtr);
+          searchPtr = NULL;
+        }
+        else if (searchPtr->prev EQ NULL)
+        {
+          /* begining of list */
+          searchPtr->next->prev = NULL;
+          searchHead = searchPtr->next;
+          tmpPtr = searchPtr;
+          searchPtr = searchPtr->next;
+          XFREE(tmpPtr->term);
+          XFREE(tmpPtr);
+        }
+        else
+        {
+          /* middle of list */
+          searchPtr->next->prev = searchPtr->prev;
+          searchPtr->prev->next = searchPtr->next;
+          tmpPtr = searchPtr;
+          searchPtr = searchPtr->next;
+          XFREE(tmpPtr->term);
+          XFREE(tmpPtr);
+        }
+      }
+      else
+        searchPtr = searchPtr->next; /* advance to next record */
+    }
+  }
+
+  /* sort the offset list */
+  if (config->match_count > 1)
+  {
+#ifdef DEBUG
+    if (config->debug >= 4)
+      fprintf(stderr, "DEBUG - Match count: %lu\n", config->match_count);
+#endif
+    bubbleSort(config->match_offsets, config->match_count);
+  }
+
+  fclose(inFile);
+
+  /* cleanup temp search term list */
+  while ( searchHead != NULL ) {
+    tmpPtr = searchHead;
+    searchHead = searchHead->next;
+    XFREE( tmpPtr->term );
+    XFREE( tmpPtr );
+  }
+  searchTail = searchHead = NULL;
+
+  if (match)
+    return (EXIT_SUCCESS);
+  else
+    return (EXIT_FAILURE);
 }

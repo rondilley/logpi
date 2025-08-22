@@ -44,6 +44,23 @@
 #define EQ ==
 #define NE !=
 
+/* Performance optimization macros */
+#ifdef __GNUC__
+#define LIKELY(x)       __builtin_expect(!!(x), 1)
+#define UNLIKELY(x)     __builtin_expect(!!(x), 0)
+#define PREFETCH_R(addr) __builtin_prefetch((addr), 0, 3)
+#define PREFETCH_W(addr) __builtin_prefetch((addr), 1, 3)
+#define ALWAYS_INLINE   __attribute__((always_inline)) inline
+#define ALIGNED(x)      __attribute__((aligned(x)))
+#else
+#define LIKELY(x)       (x)
+#define UNLIKELY(x)     (x)  
+#define PREFETCH_R(addr)
+#define PREFETCH_W(addr)
+#define ALWAYS_INLINE   inline
+#define ALIGNED(x)
+#endif
+
 #ifndef PATH_MAX
 #ifdef MAXPATHLEN
 #define PATH_MAX MAXPATHLEN
@@ -119,10 +136,12 @@ typedef struct {
   int facility;
   int priority;
   size_t *match_offsets;
+  size_t *field_offsets;  /* Field offsets corresponding to match_offsets */
   size_t match_count;
   time_t current_time;
   pid_t cur_pid;
   FILE *outFile_st;
+  int auto_lpi_naming;  /* Enable automatic .lpi file naming */
 } Config_t;
 
 #endif /* end of COMMON_H */

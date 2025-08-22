@@ -52,6 +52,13 @@ static size_t hashPrimes[] = {
 #define FNV_OFFSET_BASIS 2166136261U
 #define FNV_PRIME 16777619U
 
+/* xxHash constants for inlined implementation */
+#define XXH_PRIME32_1   0x9E3779B1U
+#define XXH_PRIME32_2   0x85EBCA77U
+#define XXH_PRIME32_3   0xC2B2AE3DU
+#define XXH_PRIME32_4   0x27D4EB2FU
+#define XXH_PRIME32_5   0x165667B1U
+
 /* Memory pool constants */
 #define POOL_SIZE 1024
 
@@ -124,15 +131,8 @@ static void freePools(struct hash_s *hash)
 
 uint32_t fnv1aHash(const char *keyString, int keyLen)
 {
-  uint32_t hash = FNV_OFFSET_BASIS;
-  int i;
-  
-  for (i = 0; i < keyLen; i++) {
-    hash ^= (uint8_t)keyString[i];
-    hash *= FNV_PRIME;
-  }
-  
-  return hash;
+  /* Use xxHash for better performance and distribution */
+  return xxhash32_small(keyString, keyLen, 0);
 }
 
 /****
@@ -349,8 +349,33 @@ int addUniqueHashRec(struct hash_s *hash, const char *keyString, int keyLen,
   if (keyLen == 0)
     keyLen = strlen(keyString) + 1;
     
-  /* Calculate hash and bucket */
-  hashValue = fnv1aHash(keyString, keyLen);
+  /* Inline xxhash for better performance */
+  if (LIKELY(keyLen <= 32)) {
+    const uint8_t* p = (const uint8_t*)keyString;
+    const uint8_t* end = p + keyLen;
+    uint32_t h32 = XXH_PRIME32_5 + (uint32_t)keyLen;
+    
+    while (p + 4 <= end) {
+      h32 += (*(uint32_t*)p) * XXH_PRIME32_3;
+      h32 = ((h32 << 17) | (h32 >> 15)) * XXH_PRIME32_4;
+      p += 4;
+    }
+    
+    while (p < end) {
+      h32 += (*p++) * XXH_PRIME32_5;
+      h32 = ((h32 << 11) | (h32 >> 21)) * XXH_PRIME32_1;
+    }
+    
+    h32 ^= h32 >> 15;
+    h32 *= XXH_PRIME32_2;
+    h32 ^= h32 >> 13;
+    h32 *= XXH_PRIME32_3;
+    h32 ^= h32 >> 16;
+    
+    hashValue = h32;
+  } else {
+    hashValue = fnv1aHash(keyString, keyLen);
+  }
   bucket = hashValue % hash->size;
   
   /* Check for existing record */
@@ -530,22 +555,19 @@ uint32_t searchHash(struct hash_s *hash, const char *keyString) {
  *
  ****/
 
-struct hashRec_s *getHashRecord(struct hash_s *hash, const void *keyString) {
-  uint32_t hashValue;
-  uint32_t bucket;
-  struct hashRec_s *record;
-  int keyLen = strlen(keyString) + 1;
+/* Optimized inline version for hot path */
+static inline struct hashRec_s *getHashRecord_fast(struct hash_s *hash, 
+                                                   const void *keyString, 
+                                                   int keyLen,
+                                                   uint32_t hashValue) {
+  uint32_t bucket = hashValue % hash->size;
+  struct hashRec_s *record = hash->buckets[bucket];
   
-  if (!hash || !keyString)
-    return NULL;
-    
-  /* Calculate hash and bucket */
-  hashValue = fnv1aHash(keyString, keyLen);
-  bucket = hashValue % hash->size;
+  /* Prefetch bucket data for better cache performance */
+  __builtin_prefetch(record, 0, 3);
   
-  /* Search bucket chain */
-  record = hash->buckets[bucket];
   while (record) {
+    /* Check hash value first (fastest comparison) */
     if (record->hashValue == hashValue &&
         record->keyLen == keyLen &&
         XMEMCMP(record->keyString, keyString, keyLen) == 0) {
@@ -554,6 +576,84 @@ struct hashRec_s *getHashRecord(struct hash_s *hash, const void *keyString) {
       record->accessCount++;
       return record;
     }
+    record = record->next;
+    /* Prefetch next record for better cache locality */
+    if (record) __builtin_prefetch(record, 0, 3);
+  }
+  
+  return NULL; /* Not found */
+}
+
+struct hashRec_s *getHashRecord(struct hash_s *hash, const void *keyString) {
+  uint32_t hashValue;
+  uint32_t bucket;
+  struct hashRec_s *record;
+  int keyLen;
+  const uint8_t* p;
+  const uint8_t* end;
+  uint32_t h32;
+  
+  if (UNLIKELY(!hash || !keyString))
+    return NULL;
+    
+  /* Fast string length calculation */
+  keyLen = strlen(keyString) + 1;
+  
+  /* Use the same hash algorithm as addUniqueHashRec */
+  if (LIKELY(keyLen <= 32)) {
+    const uint8_t* p = (const uint8_t*)keyString;
+    const uint8_t* end = p + keyLen;
+    uint32_t h32 = XXH_PRIME32_5 + (uint32_t)keyLen;
+    
+    while (p + 4 <= end) {
+      h32 += (*(uint32_t*)p) * XXH_PRIME32_3;
+      h32 = ((h32 << 17) | (h32 >> 15)) * XXH_PRIME32_4;
+      p += 4;
+    }
+    
+    while (p < end) {
+      h32 += (*p++) * XXH_PRIME32_5;
+      h32 = ((h32 << 11) | (h32 >> 21)) * XXH_PRIME32_1;
+    }
+    
+    h32 ^= h32 >> 15;
+    h32 *= XXH_PRIME32_2;
+    h32 ^= h32 >> 13;
+    h32 *= XXH_PRIME32_3;
+    h32 ^= h32 >> 16;
+    
+    hashValue = h32;
+  } else {
+    hashValue = fnv1aHash(keyString, keyLen);
+  }
+  
+  /* Use simple modulo to match addUniqueHashRec */
+  bucket = hashValue % hash->size;
+  
+  record = hash->buckets[bucket];
+  
+  /* Prefetch bucket data */
+  __builtin_prefetch(record, 0, 3);
+  
+  /* Hot loop - optimized for common case of short chains */
+  while (record) {
+    /* Most likely path: different hash values */
+    if (LIKELY(record->hashValue != hashValue)) {
+      record = record->next;
+      continue;
+    }
+    
+    /* Hash matches, check length */
+    if (LIKELY(record->keyLen == keyLen)) {
+      /* Length matches, do final comparison */
+      if (LIKELY(XMEMCMP(record->keyString, keyString, keyLen) == 0)) {
+        /* Found! Update stats and return */
+        record->lastSeen = config->current_time;
+        record->accessCount++;
+        return record;
+      }
+    }
+    
     record = record->next;
   }
   

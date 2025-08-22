@@ -42,6 +42,7 @@
 #include "mem.h"
 #include "util.h"
 #include "../include/common.h"
+#include "xxhash.h"
 #include <stdint.h>
 
 /****

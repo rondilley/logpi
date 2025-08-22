@@ -18,3 +18,8 @@
 
 	* Minor security enhancements
 	* Added --enable-hardening switch
+
+2025-08-22  Ron Dilley <ron.dilley@uberadmin.com>
+
+	* Enhanced hash performance optimization
+	* Achieved 10x performance improvement: 60M lines/minute

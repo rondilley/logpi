@@ -427,13 +427,17 @@ int is_path_safe(const char *path) {
       return FALSE;
     }
     
-    /* Check if resolved path is within allowed directories */
-    if (strncmp(resolved_path, current_dir, strlen(current_dir)) == 0 ||
-        strncmp(resolved_path, "/tmp/", 5) == 0 ||
-        strncmp(resolved_path, "/var/log/", 9) == 0) {
-      result = TRUE;
+    /* Check if resolved path is NOT in blacklisted directories */
+    if (strncmp(resolved_path, "/etc/", 5) == 0 ||
+        strncmp(resolved_path, "/sys/", 5) == 0 ||
+        strncmp(resolved_path, "/proc/", 6) == 0 ||
+        strncmp(resolved_path, "/dev/", 5) == 0 ||
+        strncmp(resolved_path, "/boot/", 6) == 0 ||
+        strncmp(resolved_path, "/root/", 6) == 0) {
+      display(LOG_WARNING, "Path in restricted directory: %s", resolved_path);
+      result = FALSE;
     } else {
-      display(LOG_WARNING, "Path outside allowed directories: %s", resolved_path);
+      result = TRUE;
     }
   } else if (errno == ENOENT) {
     /* File doesn't exist yet - validate parent directory */
@@ -450,9 +454,14 @@ int is_path_safe(const char *path) {
       /* Check parent directory without following symlinks */
       if (lstat(dir_path, &sb) == 0 && !S_ISLNK(sb.st_mode)) {
         if (realpath(dir_path, resolved_path) != NULL) {
-          if (strncmp(resolved_path, current_dir, strlen(current_dir)) == 0 ||
-              strncmp(resolved_path, "/tmp", 4) == 0 ||
-              strncmp(resolved_path, "/var/log", 8) == 0) {
+          if (strncmp(resolved_path, "/etc/", 5) == 0 ||
+              strncmp(resolved_path, "/sys/", 5) == 0 ||
+              strncmp(resolved_path, "/proc/", 6) == 0 ||
+              strncmp(resolved_path, "/dev/", 5) == 0 ||
+              strncmp(resolved_path, "/boot/", 6) == 0 ||
+              strncmp(resolved_path, "/root/", 6) == 0) {
+            result = FALSE;
+          } else {
             result = TRUE;
           }
         }

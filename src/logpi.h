@@ -87,6 +87,7 @@ typedef struct {
  ****/
 
 int printAddress( const struct hashRec_s *hashRec );
+void flushOutputBuffer(void);
 int processFile( const char *fName );
 int showAddresses( void );
 
