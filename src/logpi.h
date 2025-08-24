@@ -69,22 +69,64 @@
  *
  ****/
 
+/* Location entry for growable array - optimized for memory efficiency */
+typedef struct {
+  size_t line;          /* Line number (8 bytes on 64-bit) */
+  uint16_t offset;      /* Field position (2 bytes, supports up to 65535 fields) */
+} location_entry_t;
+
+/* Growable array for storing address locations */
+typedef struct {
+  location_entry_t *entries;    /* Array of line:offset pairs */
+  size_t count;                 /* Number of locations stored */
+  size_t capacity;              /* Current array capacity */
+  size_t reserved_count;        /* Thread-safe reservation counter */
+  pthread_mutex_t mutex;        /* Mutex for thread-safe operations */
+} location_array_t;
+
+/* Per-thread location data for an IP/MAC address */
+typedef struct {
+  location_array_t *locations;  /* This thread's locations for this address */
+  size_t count;                 /* This thread's count for this address */
+} thread_location_data_t;
+
+/* Metadata structure - supports per-thread location arrays */
+typedef struct {
+  size_t total_count;           /* Total occurrences across all threads */
+  int max_threads;              /* Maximum number of threads */
+  thread_location_data_t *thread_data;  /* Array of per-thread data */
+} metaData_t;
+
+/* Legacy struct for compatibility (will be phased out) */
 struct Address_s {
   size_t line;
   size_t offset;
   struct Address_s *next;
 };
 
-typedef struct {
-  size_t count;
-  struct Address_s *head;
-} metaData_t;
-
 /****
  *
  * function prototypes
  *
  ****/
+
+/* Growable array functions */
+location_array_t* create_location_array(size_t initial_capacity);
+void free_location_array(location_array_t *array);
+int add_location_atomic(location_array_t *array, size_t line, uint16_t offset);
+int grow_location_array(location_array_t *array, size_t new_capacity);
+
+/* Per-thread metadata functions */
+metaData_t* create_metadata(int max_threads);
+void free_metadata(metaData_t *metadata);
+location_array_t* get_thread_location_array(metaData_t *metadata, int thread_id);
+
+/* Address sorting for index output */
+typedef struct address_for_sorting_s {
+  char *address;                /* IP/MAC address string */
+  size_t total_count;           /* Total occurrences */
+  struct hashRec_s *hash_record; /* Pointer to original hash record */
+} address_for_sorting_t;
 
 int printAddress( const struct hashRec_s *hashRec );
 void flushOutputBuffer(void);

@@ -142,6 +142,7 @@ typedef struct {
   pid_t cur_pid;
   FILE *outFile_st;
   int auto_lpi_naming;  /* Enable automatic .lpi file naming */
+  int force_serial;     /* Force serial processing even for large files */
 } Config_t;
 
 #endif /* end of COMMON_H */

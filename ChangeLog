@@ -23,3 +23,15 @@
 
 	* Enhanced hash performance optimization
 	* Achieved 10x performance improvement: 60M lines/minute
+
+2025-08-24  Ron Dilley <ron.dilley@uberadmin.com>
+
+	* Major parallel processing implementation
+	* Added automatic parallel mode for files >100MB
+	* Achieved 125M+ lines/minute throughput in parallel mode
+	* Implemented producer-consumer architecture with dedicated I/O, worker, and hash threads
+	* Added signal-based progress reporting every 60 seconds
+	* Verified identical output between serial and parallel modes (byte-for-byte)
+	* Added comprehensive testing framework for accuracy verification
+	* Maintained backward compatibility with existing serial processing
+	* Added -s/--serial flag to force serial mode when needed

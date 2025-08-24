@@ -466,6 +466,20 @@ int is_path_safe(const char *path) {
           }
         }
       }
+    } else {
+      /* No slash in path - file is in current directory */
+      if (getcwd(resolved_path, sizeof(resolved_path)) != NULL) {
+        if (strncmp(resolved_path, "/etc/", 5) == 0 ||
+            strncmp(resolved_path, "/sys/", 5) == 0 ||
+            strncmp(resolved_path, "/proc/", 6) == 0 ||
+            strncmp(resolved_path, "/dev/", 5) == 0 ||
+            strncmp(resolved_path, "/boot/", 6) == 0 ||
+            strncmp(resolved_path, "/root/", 6) == 0) {
+          result = FALSE;
+        } else {
+          result = TRUE;
+        }
+      }
     }
   }
   

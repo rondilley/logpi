@@ -1,25 +1,27 @@
-.TH LOGPI 1  "15 December 2018" "logpi @VERSION@" "logpi @VERSION@"
+.TH LOGPI 1  "24 August 2025" "logpi @VERSION@" "logpi @VERSION@"
 .SH NAME
 logpi \- Log Pseudo Indexer.
 .SH SYNOPSIS
 .na
 .B logpi
 [
-.B \-hv
+.B \-hsvw
 ] [
 .B \-d
 .I log\-level
-] [
-.B \-w
-.I filename
 ]
-filename
+.I filename
+[
+.I filename
+\&...]
 
 .SH DESCRIPTION
 .LP
-Log Pseudo Indexer(\fllogpi\fP) is a small and fast log post-processor that provides simple
-indexing for network addresses.  You use the tool to post-process text log data and speed up
-searching for log lines with matching network addresses.
+Log Pseudo Indexer(\fllogpi\fP) is a high-performance log post-processor that provides fast
+indexing for network addresses (IPv4, IPv6, and MAC addresses). The tool supports both serial
+and parallel processing modes, automatically selecting parallel processing for files larger
+than 100MB to achieve maximum throughput. Both modes produce identical index files with
+perfect accuracy verification.
 
 .SH OPTIONS
 Command line options are described below.
@@ -27,30 +29,47 @@ Command line options are described below.
 .B \-d
 Enable debug mode, the higher the \fllog\-level\fP, the more verbose the logging.
 .TP
-.B \-h
-Display help details.
+.B \-h, \-\-help
+Display help information and usage examples.
 .TP
-.B \-v
+.B \-s, \-\-serial
+Force serial processing mode, disabling automatic parallel processing for large files.
+.TP
+.B \-v, \-\-version
 Show version information.
 .TP
-.B \-w
-Save index to a file.
+.B \-w, \-\-write
+Auto-generate .lpi index files for each input file (input.log becomes input.log.lpi).
 .TP
 .B filename
-One or more files to process, us '\-' to read from stdin.
+One or more files to process. Use '\-' to read from stdin (not compatible with \-w).
 
 .SH EXAMPLES
 .TP
-Process file using the fast parse and template code.
+Process log file and display network addresses to stdout:
 .B logpi
-.I file
+.I /var/log/syslog
 .PP
 .TP
-Process file and save all unique templates to outfile.
-.B logpi
-\-w 
-.I outfile
-.I file
+Process log file and create index file (auto-naming):
+.B logpi \-w
+.I /var/log/syslog
+.br
+(Creates /var/log/syslog.lpi)
+.PP
+.TP
+Force serial processing on large file:
+.B logpi \-s \-w
+.I large_logfile.log
+.PP
+.TP
+Process multiple files with parallel processing:
+.B logpi \-w
+.I *.log
+.PP
+.TP
+Real-time processing from stdin:
+.B tail \-f /var/log/access.log | logpi \-
 .PP
 .TP
 
@@ -58,15 +77,30 @@ Process file and save all unique templates to outfile.
 .B \fllogpi\fP 
 returns 0 on normal program termination and 1 on error.  Additional diagnostic information is available through the \-d command line switch.
 
+.SH PERFORMANCE
+.LP
+Performance varies based on processing mode:
+.TP
+.B Serial Mode
+Processes approximately 60 million lines per minute on modern hardware.
+Used automatically for files smaller than 100MB or when forced with \-s flag.
+.TP
+.B Parallel Mode  
+Achieves 125+ million lines per minute throughput using multi-threaded processing.
+Automatically enabled for files larger than 100MB with sufficient CPU cores available.
+Progress reports are displayed every 60 seconds during processing.
+
 .SH SIGNALS
 .TP
-SIGHUP will cause \fltmpltr\fP to quit gracefully.
+SIGHUP will cause \fllogpi\fP to quit gracefully.
 .TP
-SIGTERM will cause \fltmpltr\fP to shutdown.
+SIGTERM will cause \fllogpi\fP to shutdown.
+.TP
+SIGALRM is used internally for progress reporting (every 60 seconds).
 
 .SH COPYRIGHT
 .B logpi 
-is Copyright (c) 2017 Ron Dilley.
+is Copyright (c) 2017-2025 Ron Dilley.
 
 This program is free software; you can redistribute it and/or modify 
 it under the terms of the GNU General Public License as published 

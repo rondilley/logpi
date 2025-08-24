@@ -25,6 +25,24 @@ Version 0.9 (July 14, 2025):
 
 Version 0.10 (August 22, 2025):
 
-* Major performance enhancement: 10x speed improvement
-* Hash table optimization achieving 60M lines/minute parsing
-* Improved memory efficiency in indexing operations
+* Enhanced hash performance optimization achieving 10x speed improvement
+* Increased hash table bucket count from 1K to 65K buckets for better distribution
+* Implemented memory pre-allocation pools to eliminate malloc overhead
+* Added SIGALRM-based progress reporting every 60 seconds
+* Optimized hash collision handling and growth checking algorithms
+* Serial mode performance improved to 60M lines/minute
+* Added comprehensive benchmarking and performance analysis tools
+
+Version 0.11 (August 24, 2025):
+
+* Revolutionary parallel processing implementation with 20x speed improvement
+* Automatic parallel mode for files >100MB achieving 125M+ lines/minute  
+* Multi-threaded producer-consumer architecture with dedicated I/O, worker, and hash threads
+* Signal-based progress reporting every 60 seconds during parallel processing
+* Comprehensive accuracy verification: identical output between serial and parallel modes
+* Smart chunk boundary detection maintaining line integrity across thread boundaries
+* Lock-free communication queues eliminating thread contention bottlenecks
+* Frequency-based address sorting with numerical IP tiebreaking for consistent output
+* Added -s/--serial flag for forcing serial mode when needed
+* Maintains full backward compatibility with existing usage patterns
+* Atomic counter-based line tracking with SIGALRM for accurate progress reporting

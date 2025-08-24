@@ -44,9 +44,12 @@
  *
  ****/
 
-PRIVATE char *fields[MAX_FIELD_POS];
+/* Thread-local storage for parser fields to ensure thread safety */
+__thread char *fields[MAX_FIELD_POS] = {0};
+__thread int fields_initialized = 0;
+
 #ifdef USE_NETADDR_PARSER
-PRIVATE parse_result_t parse_result;
+__thread parse_result_t parse_result;
 #endif
 
 /****
@@ -73,6 +76,11 @@ void initParser(void)
 {
   int i;
   
+  /* Skip if already initialized for this thread */
+  if (fields_initialized) {
+    return;
+  }
+  
   /* make sure the field list of clean */
   XMEMSET(fields, 0, sizeof(char *) * MAX_FIELD_POS);
 
@@ -88,6 +96,8 @@ void initParser(void)
       return;
     }
   }
+  
+  fields_initialized = 1;
 
 #ifdef USE_NETADDR_PARSER
   /* Initialize network address parser */
@@ -105,9 +115,17 @@ void deInitParser(void)
 {
   int i;
 
+  if (!fields_initialized) {
+    return;
+  }
+
   for (i = 0; i < MAX_FIELD_POS; i++)
-    if (fields[i] != NULL)
+    if (fields[i] != NULL) {
       XFREE(fields[i]);
+      fields[i] = NULL;
+    }
+  
+  fields_initialized = 0;
 }
 
 /****

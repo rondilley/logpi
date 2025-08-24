@@ -204,6 +204,7 @@ AC_CHECK_HEADERS([vfork.h])
 AC_CHECK_HEADERS([libintl.h])
 AC_CHECK_HEADERS([wchar.h])
 AC_CHECK_HEADERS([zlib.h])
+AC_CHECK_HEADERS([pthread.h])
 
 dnl ############## Function checks
 AC_CHECK_FUNCS([getopt_long])
@@ -231,6 +232,7 @@ AC_CHECK_FUNCS([strlcat])
 AC_CHECK_FUNCS([strrchr])
 AC_CHECK_FUNC(gethostbyname, , AC_CHECK_LIB(nsl, gethostbyname))
 AC_CHECK_FUNC(socket, , AC_CHECK_LIB(socket, socket))
+AC_CHECK_LIB(pthread, pthread_create)
 AC_FUNC_CLOSEDIR_VOID
 AC_FUNC_FORK
 AC_FUNC_LSTAT
